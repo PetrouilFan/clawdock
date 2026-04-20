@@ -5,12 +5,6 @@
 
 const app = (() => {
   function init() {
-    // Check if all dependencies are loaded
-    if (!checkDependencies()) {
-      console.error('Required dependencies not loaded');
-      return;
-    }
-
     console.log('🦀 Clawdock Dashboard initializing...');
 
     // Initialize all components
@@ -32,34 +26,6 @@ const app = (() => {
     loadInitialData();
 
     console.log('🦀 Clawdock Dashboard initialized');
-  }
-
-  function checkDependencies() {
-    const required = ['api', 'state', 'dom', 'format', 'validation'];
-    const missing = required.filter((dep) => {
-      try { return typeof eval(dep) === 'undefined'; } catch { return true; }
-    });
-
-    if (missing.length > 0) {
-      console.error('Missing dependencies:', missing);
-      const content = document.querySelector('.content');
-      if (content) {
-        content.innerHTML = `
-          <div class="empty-state" style="color: var(--accent-danger);">
-            <div class="empty-state-icon">❌</div>
-            <div class="empty-state-title">Failed to load JavaScript modules</div>
-            <div class="empty-state-text">
-              Missing: ${missing.join(', ')}<br>
-              Please check your internet connection or try refreshing.
-            </div>
-            <button class="btn btn-primary" onclick="location.reload()">Reload Page</button>
-          </div>
-        `;
-      }
-      return false;
-    }
-
-    return true;
   }
 
   function setupViewRouting() {
