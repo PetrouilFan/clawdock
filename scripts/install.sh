@@ -284,6 +284,11 @@ download_binary() {
             error "Build succeeded but binary not found"
         fi
         chmod +x "$INSTALL_DIR/openclaw-manager"
+
+        # Copy web static files
+        mkdir -p "$INSTALL_DIR/web/static"
+        cp -r "$TMPDIR/web/static/"* "$INSTALL_DIR/web/static/" 2>/dev/null || true
+
         cd /
         rm -rf "$TMPDIR"
         log "Built openclaw-manager from source"
