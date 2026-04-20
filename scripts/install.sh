@@ -2,7 +2,7 @@
 set -e
 
 # OpenClaw Manager Installer
-# Usage: curl -sSL https://raw.githubusercontent.com/openclaw/manager/main/install.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/PetrouilFan/clawdock/refs/heads/main/scripts/install.sh | bash
 # Supports: Debian/Ubuntu, Arch/Manjaro, Fedora/RHEL
 
 set -e
@@ -211,19 +211,52 @@ download_binary() {
     log "Downloading openclaw-manager ${MANAGER_VERSION}"
 
     if [ "$MANAGER_VERSION" = "latest" ]; then
-        ASSET_URL=$(curl -sSL "https://api.github.com/repos/openclaw/manager/releases/latest" | grep -o '"browser_download_url": "[^"]*linux-amd64"' | cut -d'"' -f4)
+        ASSET_URL=$(curl -sSL "https://api.github.com/repos/PetrouilFan/clawdock/releases/latest" | grep -o '"browser_download_url": "[^"]*linux-amd64"' | cut -d'"' -f4)
     else
-        ASSET_URL="https://github.com/openclaw/manager/releases/download/${MANAGER_VERSION}/openclaw-manager-linux-amd64"
+        ASSET_URL="https://github.com/PetrouilFan/clawdock/releases/download/${MANAGER_VERSION}/openclaw-manager-linux-amd64"
     fi
 
     if [ -z "$ASSET_URL" ]; then
-        error "Could not find release asset for ${MANAGER_VERSION}"
+        log "No release asset found, building from source..."
+
+        # Check for Go
+        if ! command -v go &> /dev/null; then
+            log "Go not found, installing..."
+            case "$PKG_MANAGER" in
+                apt) apt-get update && apt-get install -y golang-go ;;
+                pacman) pacman -Sy --noconfirm go ;;
+                dnf) dnf install -y go ;;
+                zypper) zypper install -y go ;;
+                *) error "Go is required to build from source. Install it from https://go.dev/doc/install" ;;
+            esac
+        fi
+
+        # Clone and build
+        TMPDIR=$(mktemp -d)
+        git clone --depth 1 https://github.com/PetrouilFan/clawdock.git "$TMPDIR" 2>/dev/null || true
+        if [ -d "$TMPDIR" ] && [ -f "$TMPDIR/Makefile" ]; then
+            cd "$TMPDIR"
+            make build 2>/dev/null || go build -o "$INSTALL_DIR/openclaw-manager" ./cmd/server 2>/dev/null || {
+                cd /
+                rm -rf "$TMPDIR"
+                error "Failed to build openclaw-manager"
+            }
+            mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager" 2>/dev/null || true
+            mv "$TMPDIR/openclaw-manager-linux-amd64" "$INSTALL_DIR/openclaw-manager" 2>/dev/null || true
+            chmod +x "$INSTALL_DIR/openclaw-manager"
+            cd /
+            rm -rf "$TMPDIR"
+            log "Built openclaw-manager from source"
+        else
+            cd /
+            rm -rf "$TMPDIR"
+            error "Failed to clone repository"
+        fi
+    else
+        curl -sSL "$ASSET_URL" -o "$INSTALL_DIR/openclaw-manager"
+        chmod +x "$INSTALL_DIR/openclaw-manager"
+        log "Downloaded to $INSTALL_DIR/openclaw-manager"
     fi
-
-    curl -sSL "$ASSET_URL" -o "$INSTALL_DIR/openclaw-manager"
-    chmod +x "$INSTALL_DIR/openclaw-manager"
-
-    log "Downloaded to $INSTALL_DIR/openclaw-manager"
 }
 
 write_config() {
