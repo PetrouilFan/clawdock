@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Manager</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eaeaea;
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        header {
+            background: #16213e;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #0f3460;
+        }
+        h1 { color: #e94560; font-size: 1.8rem; }
+        .subtitle { color: #888; margin-top: 0.5rem; }
+        .card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 1px solid #0f3460;
+        }
+        .card h2 { color: #e94560; margin-bottom: 1rem; font-size: 1.2rem; }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .status-running { background: #28a745; color: white; }
+        .status-stopped { background: #6c757d; color: white; }
+        .status-error { background: #dc3545; color: white; }
+        .status-drifted { background: #ffc107; color: black; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #0f3460;
+        }
+        th { color: #888; font-weight: 500; font-size: 0.85rem; }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.8; }
+        .btn-start { background: #28a745; color: white; }
+        .btn-stop { background: #dc3545; color: white; }
+        .btn-restart { background: #ffc107; color: black; }
+        .btn-edit { background: #0f3460; color: white; }
+        .btn-terminal { background: #17a2b8; color: white; }
+        .empty { text-align: center; padding: 3rem; color: #888; }
+        .api-section { margin-top: 2rem; }
+        .api-section code {
+            background: #0f3460;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>OpenClaw Manager</h1>
+            <div class="subtitle">Local control plane for Dockerized OpenClaw agents</div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="card">
+            <h2>Agents</h2>
+            <div id="agents-list">
+                <div class="empty">Loading agents...</div>
+            </div>
+        </div>
+
+        <div class="card api-section">
+            <h2>API Endpoints</h2>
+            <div style="font-size: 0.9rem; line-height: 1.8;">
+                <div><code>GET /api/agents</code> - List all agents</div>
+                <div><code>POST /api/agents</code> - Create agent</div>
+                <div><code>GET /api/agents/:id</code> - Get agent</div>
+                <div><code>PATCH /api/agents/:id</code> - Update agent</div>
+                <div><code>POST /api/agents/:id/start</code> - Start agent</div>
+                <div><code>POST /api/agents/:id/stop</code> - Stop agent</div>
+                <div><code>POST /api/agents/:id/terminal</code> - WebSocket terminal</div>
+                <div><code>GET /healthz</code> - Health check</div>
+                <div><code>GET /readyz</code> - Readiness check</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function loadAgents() {
+            try {
+                const res = await fetch('/api/agents');
+                const agents = await res.json();
+                const container = document.getElementById('agents-list');
+
+                if (!agents || agents.length === 0) {
+                    container.innerHTML = '<div class="empty">No agents configured. Create your first agent via the API.</div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Drift</th>
+                                <th>Image</th>
+                                <th>Provider</th>
+                                <th>Model</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${agents.map(a => `
+                                <tr>
+                                    <td>${a.name}</td>
+                                    <td><span class="status-badge status-${a.status_actual}">${a.status_actual}</span></td>
+                                    <td><span class="status-badge status-${a.drift_state === 'in_sync' ? 'running' : 'drifted'}">${a.drift_state}</span></td>
+                                    <td>${a.image_repo}:${a.image_tag}</td>
+                                    <td>${a.provider_id}</td>
+                                    <td>${a.model_id}</td>
+                                    <td>
+                                        ${a.status_actual !== 'running'
+                                            ? '<button class="btn btn-start" onclick="startAgent(\'' + a.id + '\')">Start</button>'
+                                            : '<button class="btn btn-stop" onclick="stopAgent(\'' + a.id + '\')">Stop</button>'
+                                        }
+                                        <button class="btn btn-terminal" onclick="openTerminal(\'' + a.id + '\')">Terminal</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (e) {
+                document.getElementById('agents-list').innerHTML = '<div class="empty">Failed to load agents</div>';
+            }
+        }
+
+        async function startAgent(id) {
+            await fetch(`/api/agents/${id}/start`, { method: 'POST' });
+            loadAgents();
+        }
+
+        async function stopAgent(id) {
+            await fetch(`/api/agents/${id}/stop`, { method: 'POST' });
+            loadAgents();
+        }
+
+        function openTerminal(id) {
+            const ws = new WebSocket(`ws://${location.host}/api/agents/${id}/terminal`);
+            const terminal = window.open('', 'terminal', 'width=800,height=600');
+            terminal.document.write(`
+                <html>
+                <head><title>Terminal - ${id}</title></head>
+                <body style="background:#000;color:#0f0;font-family:monaco,monospace;padding:1rem;">
+                <pre id="output"></pre>
+                <script>
+                    const ws = new WebSocket('ws://${location.host}/api/agents/${id}/terminal');
+                    const output = document.getElementById('output');
+                    ws.onmessage = (e) => output.textContent += e.data;
+                    ws.onclose = () => output.textContent += '\\n[Connection closed]';
+                    document.addEventListener('keypress', (e) => {
+                        ws.send(e.key);
+                    });
+                <\/script>
+                </body>
+                </html>
+            `);
+        }
+
+        loadAgents();
+    </script>
+</body>
+</html>

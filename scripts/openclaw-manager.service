@@ -1,0 +1,26 @@
+[Unit]
+Description=OpenClaw Manager
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=openclaw-manager
+Group=openclaw-manager
+ExecStart=/opt/openclaw-manager/openclaw-manager --config /etc/openclaw-manager/config.yaml
+WorkingDirectory=/opt/openclaw-manager
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/openclaw-manager
+ReadWritePaths=/etc/openclaw-manager
+
+Environment=DOCKER_HOST=unix:///var/run/docker.sock
+
+[Install]
+WantedBy=multi-user.target
