@@ -21,7 +21,7 @@ A local control-plane webapp for managing multiple Dockerized OpenClaw agents fr
 ## Quick Install
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/PetrouilFan/clawdock/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/PetrouilFan/clawdock/refs/heads/main/install.sh | bash
 ```
 
 The installer will:
