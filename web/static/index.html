@@ -13,8 +13,14 @@
     <link rel="stylesheet" href="/css/dashboard.css">
 
     <!-- xterm.js for terminal -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/xterm@5.3.0/css/xterm.css">
+    <script src="https://unpkg.com/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script>
+        // Fallback if xterm fails to load
+        if (typeof Terminal === 'undefined') {
+            console.warn('xterm.js failed to load from CDN');
+        }
+    </script>
 </head>
 <body>
     <div class="dashboard">

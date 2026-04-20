@@ -40,6 +40,21 @@ const app = (() => {
 
     if (missing.length > 0) {
       console.error('Missing dependencies:', missing);
+      // Show visible error on page
+      const content = document.querySelector('.content');
+      if (content) {
+        content.innerHTML = `
+          <div class="empty-state" style="color: var(--accent-danger);">
+            <div class="empty-state-icon">❌</div>
+            <div class="empty-state-title">Failed to load JavaScript modules</div>
+            <div class="empty-state-text">
+              Missing: ${missing.join(', ')}<br>
+              Please check your internet connection or try refreshing.
+            </div>
+            <button class="btn btn-primary" onclick="location.reload()">Reload Page</button>
+          </div>
+        `;
+      }
       return false;
     }
 

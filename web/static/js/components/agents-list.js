@@ -29,11 +29,23 @@ const agentsList = (() => {
     state.setLoading('agents', true);
     try {
       const agents = await api.agents.list();
-      state.set('agents', agents);
+      state.set('agents', agents || []);
       state.clearError('agents');
     } catch (error) {
+      console.error('Failed to load agents:', error);
       state.setError('agents', error.message);
-      toasts.error('Failed to load agents: ' + error.message);
+      // Don't use toasts here to avoid spam
+      const container = document.getElementById('agents-list');
+      if (container) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <div class="empty-state-title">Failed to load agents</div>
+            <div class="empty-state-text">${dom.escapeHtml(error.message)}</div>
+            <button class="btn btn-primary" onclick="agentsList.refresh()">Retry</button>
+          </div>
+        `;
+      }
     } finally {
       state.setLoading('agents', false);
     }
