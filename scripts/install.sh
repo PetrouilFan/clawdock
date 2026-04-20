@@ -233,23 +233,26 @@ download_binary() {
 
         # Clone and build
         TMPDIR=$(mktemp -d)
-        git clone --depth 1 https://github.com/PetrouilFan/clawdock.git "$TMPDIR" 2>/dev/null || true
+        git clone --depth 1 https://github.com/PetrouilFan/clawdock.git "$TMPDIR"
         if [ -d "$TMPDIR" ] && [ -f "$TMPDIR/Makefile" ]; then
             cd "$TMPDIR"
-            make build 2>/dev/null || go build -o "$INSTALL_DIR/openclaw-manager" ./cmd/server 2>/dev/null || {
+            make build 2>/dev/null || go build -o "$INSTALL_DIR/openclaw-manager" ./cmd/server
+            if [ -f "$TMPDIR/openclaw-manager" ]; then
+                mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager"
+            elif [ -f "$TMPDIR/openclaw-manager-linux-amd64" ]; then
+                mv "$TMPDIR/openclaw-manager-linux-amd64" "$INSTALL_DIR/openclaw-manager"
+            else
                 cd /
                 rm -rf "$TMPDIR"
-                error "Failed to build openclaw-manager"
-            }
-            mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager" 2>/dev/null || true
-            mv "$TMPDIR/openclaw-manager-linux-amd64" "$INSTALL_DIR/openclaw-manager" 2>/dev/null || true
+                error "Build failed - binary not found"
+            fi
             chmod +x "$INSTALL_DIR/openclaw-manager"
             cd /
             rm -rf "$TMPDIR"
             log "Built openclaw-manager from source"
         else
             cd /
-            rm -rf "$TMPDIR"
+            rm -rf "$TMPDIR" 2>/dev/null || true
             error "Failed to clone repository"
         fi
     else
