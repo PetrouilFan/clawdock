@@ -3,190 +3,388 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenClaw Manager</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #eaeaea;
-            min-height: 100vh;
-        }
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-        header {
-            background: #16213e;
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid #0f3460;
-        }
-        h1 { color: #e94560; font-size: 1.8rem; }
-        .subtitle { color: #888; margin-top: 0.5rem; }
-        .card {
-            background: #16213e;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border: 1px solid #0f3460;
-        }
-        .card h2 { color: #e94560; margin-bottom: 1rem; font-size: 1.2rem; }
-        .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-        .status-running { background: #28a745; color: white; }
-        .status-stopped { background: #6c757d; color: white; }
-        .status-error { background: #dc3545; color: white; }
-        .status-drifted { background: #ffc107; color: black; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td {
-            text-align: left;
-            padding: 0.75rem;
-            border-bottom: 1px solid #0f3460;
-        }
-        th { color: #888; font-weight: 500; font-size: 0.85rem; }
-        .btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-right: 0.5rem;
-            transition: opacity 0.2s;
-        }
-        .btn:hover { opacity: 0.8; }
-        .btn-start { background: #28a745; color: white; }
-        .btn-stop { background: #dc3545; color: white; }
-        .btn-restart { background: #ffc107; color: black; }
-        .btn-edit { background: #0f3460; color: white; }
-        .btn-terminal { background: #17a2b8; color: white; }
-        .empty { text-align: center; padding: 3rem; color: #888; }
-        .api-section { margin-top: 2rem; }
-        .api-section code {
-            background: #0f3460;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.9rem;
-        }
-    </style>
+    <meta name="description" content="Clawdock - Manage your OpenClaw agents">
+    <title>Clawdock</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦀</text></svg>">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    <!-- xterm.js for terminal -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>OpenClaw Manager</h1>
-            <div class="subtitle">Local control plane for Dockerized OpenClaw agents</div>
-        </div>
-    </header>
+    <div class="dashboard">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <span class="brand-icon">🦀</span>
+                    <span class="brand-text">claw<span>dock</span></span>
+                </div>
+            </div>
 
-    <main class="container">
-        <div class="card">
-            <h2>Agents</h2>
-            <div id="agents-list">
-                <div class="empty">Loading agents...</div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <a href="#agents" class="nav-link active" data-view="agents">
+                        <span class="nav-icon">🤖</span>
+                        <span>Agents</span>
+                    </a>
+                    <a href="#providers" class="nav-link" data-view="providers">
+                        <span class="nav-icon">🔌</span>
+                        <span>Providers</span>
+                    </a>
+                    <a href="#audit" class="nav-link" data-view="audit">
+                        <span class="nav-icon">📋</span>
+                        <span>Audit Log</span>
+                    </a>
+                    <a href="#system" class="nav-link" data-view="system">
+                        <span class="nav-icon">⚙️</span>
+                        <span>System</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div>OpenClaw Manager</div>
+                <div style="margin-top: 0.25rem;">v1.0.0</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 id="header-title" class="header-title">Agents</h1>
+                </div>
+                <div class="header-right">
+                    <span id="health-status" class="status-badge offline">Loading...</span>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="content">
+                <!-- Agents View -->
+                <div id="agents-view" class="view">
+                    <!-- Stats Cards -->
+                    <div id="stats-grid" class="stats-grid">
+                        <div class="stat-card skeleton" style="height: 80px;"></div>
+                        <div class="stat-card skeleton" style="height: 80px;"></div>
+                        <div class="stat-card skeleton" style="height: 80px;"></div>
+                        <div class="stat-card skeleton" style="height: 80px;"></div>
+                    </div>
+
+                    <!-- Toolbar -->
+                    <div class="toolbar">
+                        <div class="toolbar-left">
+                            <div class="search-box">
+                                <input type="text" id="agent-search" class="form-input" placeholder="Search agents...">
+                            </div>
+                            <select id="agent-status-filter" class="form-select filter-select">
+                                <option value="all">All Status</option>
+                                <option value="running">Running</option>
+                                <option value="stopped">Stopped</option>
+                                <option value="error">Error</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-right">
+                            <button id="create-agent-btn" class="btn btn-primary">+ Create Agent</button>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="agents-loading" class="loading hidden">
+                        <div class="spinner"></div>
+                    </div>
+
+                    <!-- Agents Grid -->
+                    <div id="agents-list">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🦀</div>
+                            <div class="empty-state-title">Loading agents...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Providers View -->
+                <div id="providers-view" class="view hidden">
+                    <div id="providers-content">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Log View -->
+                <div id="audit-view" class="view hidden">
+                    <div id="audit-content">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System View -->
+                <div id="system-view" class="view hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">System Status</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">⚙️</div>
+                                <div class="empty-state-title">System Information</div>
+                                <div class="empty-state-text">
+                                    Health checks and system status will appear here.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Agent Modal -->
+    <div id="create-agent-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Agent</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="create-agent-form">
+                    <div class="form-group">
+                        <label class="form-label">Name <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-input" placeholder="My Agent" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Image Tag</label>
+                            <input type="text" name="image_tag" class="form-input" placeholder="latest" value="latest">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Restart Policy</label>
+                            <select name="restart_policy" class="form-select">
+                                <option value="always">Always</option>
+                                <option value="unless-stopped" selected>Unless Stopped</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Provider <span class="required">*</span></label>
+                        <select name="provider_id" class="form-select provider-select" required>
+                            <option value="">Select Provider...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Model <span class="required">*</span></label>
+                        <select name="model_id" class="form-select model-select" required>
+                            <option value="">Select Provider first...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Telegram API Key</label>
+                        <input type="password" name="telegram_api_key" class="form-input" placeholder="Optional">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Workspace Host Path</label>
+                        <div class="input-group">
+                            <input type="text" name="workspace_host_path" class="form-input" placeholder="/data/workspaces/my-agent">
+                            <button type="button" class="btn btn-secondary" data-action="validate-path">Validate</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Workspace Container Path</label>
+                        <input type="text" name="workspace_container_path" class="form-input" value="/workspace">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Extra Environment Variables (JSON)</label>
+                        <textarea name="extra_env_json" class="form-textarea" rows="3" placeholder='{"KEY": "value"}'></textarea>
+                    </div>
+
+                    <div id="create-form-errors"></div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-action="cancel-create">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Agent</button>
+                    </div>
+                </form>
             </div>
         </div>
+    </div>
 
-        <div class="card api-section">
-            <h2>API Endpoints</h2>
-            <div style="font-size: 0.9rem; line-height: 1.8;">
-                <div><code>GET /api/agents</code> - List all agents</div>
-                <div><code>POST /api/agents</code> - Create agent</div>
-                <div><code>GET /api/agents/:id</code> - Get agent</div>
-                <div><code>PATCH /api/agents/:id</code> - Update agent</div>
-                <div><code>POST /api/agents/:id/start</code> - Start agent</div>
-                <div><code>POST /api/agents/:id/stop</code> - Stop agent</div>
-                <div><code>POST /api/agents/:id/terminal</code> - WebSocket terminal</div>
-                <div><code>GET /healthz</code> - Health check</div>
-                <div><code>GET /readyz</code> - Readiness check</div>
+    <!-- Agent Detail Modal -->
+    <div id="agent-detail-modal" class="modal-overlay modal-lg">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title agent-detail-name">Agent Details</h2>
+                    <div style="margin-top: 0.5rem;">
+                        <span class="badge badge-neutral agent-detail-status">Unknown</span>
+                    </div>
+                </div>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" data-tab="overview">Overview</button>
+                    <button class="tab" data-tab="config">Configuration</button>
+                    <button class="tab" data-tab="backups">Backups</button>
+                    <button class="tab" data-tab="logs">Logs</button>
+                    <button class="tab" data-tab="terminal">Terminal</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="agent-detail-content">
+                    <!-- Content rendered dynamically -->
+                </div>
             </div>
         </div>
-    </main>
+    </div>
 
-    <script>
-        async function loadAgents() {
-            try {
-                const res = await fetch('/api/agents');
-                const agents = await res.json();
-                const container = document.getElementById('agents-list');
+    <!-- Terminal Modal -->
+    <div id="terminal-modal" class="modal-overlay modal-xl">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Terminal</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="terminal-container" class="terminal-container">
+                    <div class="terminal-header">
+                        <div class="terminal-title">
+                            💻 Terminal Session
+                            <span id="terminal-status" class="terminal-status">Disconnected</span>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-secondary" data-action="reconnect-terminal">Reconnect</button>
+                        </div>
+                    </div>
+                    <div id="terminal-body" class="terminal-body" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                if (!agents || agents.length === 0) {
-                    container.innerHTML = '<div class="empty">No agents configured. Create your first agent via the API.</div>';
-                    return;
-                }
+    <!-- Backup Modal -->
+    <div id="backup-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Backup</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="backup-form">
+                    <div class="form-group">
+                        <label class="form-label">Backup Type</label>
+                        <select name="backup_type" class="form-select" required>
+                            <option value="full" selected>Full (Config + Workspace)</option>
+                            <option value="config_only">Config Only</option>
+                            <option value="workspace_only">Workspace Only</option>
+                        </select>
+                        <p class="form-hint">Full backup includes both configuration and workspace data.</p>
+                    </div>
 
-                container.innerHTML = `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Status</th>
-                                <th>Drift</th>
-                                <th>Image</th>
-                                <th>Provider</th>
-                                <th>Model</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${agents.map(a => `
-                                <tr>
-                                    <td>${a.name}</td>
-                                    <td><span class="status-badge status-${a.status_actual}">${a.status_actual}</span></td>
-                                    <td><span class="status-badge status-${a.drift_state === 'in_sync' ? 'running' : 'drifted'}">${a.drift_state}</span></td>
-                                    <td>${a.image_repo}:${a.image_tag}</td>
-                                    <td>${a.provider_id}</td>
-                                    <td>${a.model_id}</td>
-                                    <td>
-                                        ${a.status_actual !== 'running'
-                                            ? '<button class="btn btn-start" onclick="startAgent(\'' + a.id + '\')">Start</button>'
-                                            : '<button class="btn btn-stop" onclick="stopAgent(\'' + a.id + '\')">Stop</button>'
-                                        }
-                                        <button class="btn btn-terminal" onclick="openTerminal(\'' + a.id + '\')">Terminal</button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
-            } catch (e) {
-                document.getElementById('agents-list').innerHTML = '<div class="empty">Failed to load agents</div>';
-            }
-        }
+                    <div class="form-group">
+                        <label class="toggle">
+                            <input type="checkbox" name="include_secrets" class="toggle-input">
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-label">Include secrets in backup</span>
+                        </label>
+                        <p class="form-hint">Warning: Including secrets will store API keys in the backup.</p>
+                    </div>
 
-        async function startAgent(id) {
-            await fetch(`/api/agents/${id}/start`, { method: 'POST' });
-            loadAgents();
-        }
+                    <div id="backup-form-errors"></div>
 
-        async function stopAgent(id) {
-            await fetch(`/api/agents/${id}/stop`, { method: 'POST' });
-            loadAgents();
-        }
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-action="cancel-backup">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Backup</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-        function openTerminal(id) {
-            const ws = new WebSocket(`ws://${location.host}/api/agents/${id}/terminal`);
-            const terminal = window.open('', 'terminal', 'width=800,height=600');
-            terminal.document.write(`
-                <html>
-                <head><title>Terminal - ${id}</title></head>
-                <body style="background:#000;color:#0f0;font-family:monaco,monospace;padding:1rem;">
-                <pre id="output"></pre>
-                <script>
-                    const ws = new WebSocket('ws://${location.host}/api/agents/${id}/terminal');
-                    const output = document.getElementById('output');
-                    ws.onmessage = (e) => output.textContent += e.data;
-                    ws.onclose = () => output.textContent += '\\n[Connection closed]';
-                    document.addEventListener('keypress', (e) => {
-                        ws.send(e.key);
-                    });
-                <\/script>
-                </body>
-                </html>
-            `);
-        }
+    <!-- Restore Modal -->
+    <div id="restore-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Restore Backup</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="restore-form">
+                    <div class="form-group">
+                        <label class="form-label">Target Agent</label>
+                        <select name="target_agent_id" class="form-select" required>
+                            <option value="">Current Agent</option>
+                        </select>
+                        <p class="form-hint">Select which agent to restore this backup to.</p>
+                    </div>
 
-        loadAgents();
-    </script>
+                    <div class="alert alert-warning" style="background: var(--accent-warning-bg); color: var(--accent-warning); padding: 1rem; border-radius: var(--radius-md); margin-top: 1rem;">
+                        <strong>Warning:</strong> This will overwrite the target agent's configuration and/or workspace data.
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-action="cancel-restore">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Restore</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="confirm-title">Confirm Action</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="cancel-confirm">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- JavaScript Modules -->
+    <script src="/static/js/utils/dom.js"></script>
+    <script src="/static/js/utils/format.js"></script>
+    <script src="/static/js/utils/validation.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/state.js"></script>
+    <script src="/static/js/components/modals.js"></script>
+    <script src="/static/js/components/toasts.js"></script>
+    <script src="/static/js/components/sidebar.js"></script>
+    <script src="/static/js/components/agents-list.js"></script>
+    <script src="/static/js/components/agent-detail.js"></script>
+    <script src="/static/js/components/agent-form.js"></script>
+    <script src="/static/js/components/terminal.js"></script>
+    <script src="/static/js/components/backups.js"></script>
+    <script src="/static/js/components/providers.js"></script>
+    <script src="/static/js/components/audit-log.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
