@@ -215,13 +215,16 @@ copy_web_files() {
 
     local BASE_URL="https://raw.githubusercontent.com/PetrouilFan/clawdock/main"
 
-    # Helper function to download with retry
+    # Helper function to download with retry and cache-busting
     download_file() {
         local url="$1"
         local output="$2"
         local name="$3"
+        local cache_buster="$(date +%s)"
 
-        if curl -fsSL "$url" -o "$output" 2>/dev/null; then
+        # Use cache-busting headers to bypass CDN cache
+        if curl -fsSL -H "Cache-Control: no-cache" -H "Pragma: no-cache" \
+            "$url?cb=$cache_buster" -o "$output" 2>/dev/null; then
             if [ -s "$output" ]; then
                 log "  ✓ $name"
                 return 0
