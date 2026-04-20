@@ -215,25 +215,41 @@ copy_web_files() {
 
     local BASE_URL="https://raw.githubusercontent.com/PetrouilFan/clawdock/main"
 
+    # Helper function to download with retry
+    download_file() {
+        local url="$1"
+        local output="$2"
+        local name="$3"
+
+        if curl -fsSL "$url" -o "$output" 2>/dev/null; then
+            if [ -s "$output" ]; then
+                log "  ✓ $name"
+                return 0
+            fi
+        fi
+        warn "Failed to download $name from $url"
+        return 1
+    }
+
     # Download index.html
-    curl -fsSL "$BASE_URL/web/static/index.html" -o "$INSTALL_DIR/web/static/index.html" || warn "Failed to download index.html"
+    download_file "$BASE_URL/web/static/index.html" "$INSTALL_DIR/web/static/index.html" "index.html"
 
     # Download CSS
-    curl -fsSL "$BASE_URL/web/static/css/dashboard.css" -o "$INSTALL_DIR/web/static/css/dashboard.css" || warn "Failed to download dashboard.css"
+    download_file "$BASE_URL/web/static/css/dashboard.css" "$INSTALL_DIR/web/static/css/dashboard.css" "dashboard.css"
 
     # Download core JS files
-    curl -fsSL "$BASE_URL/web/static/js/api.js" -o "$INSTALL_DIR/web/static/js/api.js" || warn "Failed to download api.js"
-    curl -fsSL "$BASE_URL/web/static/js/app.js" -o "$INSTALL_DIR/web/static/js/app.js" || warn "Failed to download app.js"
-    curl -fsSL "$BASE_URL/web/static/js/state.js" -o "$INSTALL_DIR/web/static/js/state.js" || warn "Failed to download state.js"
+    download_file "$BASE_URL/web/static/js/api.js" "$INSTALL_DIR/web/static/js/api.js" "api.js"
+    download_file "$BASE_URL/web/static/js/app.js" "$INSTALL_DIR/web/static/js/app.js" "app.js"
+    download_file "$BASE_URL/web/static/js/state.js" "$INSTALL_DIR/web/static/js/state.js" "state.js"
 
     # Download utility JS files
-    curl -fsSL "$BASE_URL/web/static/js/utils/dom.js" -o "$INSTALL_DIR/web/static/js/utils/dom.js" || warn "Failed to download dom.js"
-    curl -fsSL "$BASE_URL/web/static/js/utils/format.js" -o "$INSTALL_DIR/web/static/js/utils/format.js" || warn "Failed to download format.js"
-    curl -fsSL "$BASE_URL/web/static/js/utils/validation.js" -o "$INSTALL_DIR/web/static/js/utils/validation.js" || warn "Failed to download validation.js"
+    download_file "$BASE_URL/web/static/js/utils/dom.js" "$INSTALL_DIR/web/static/js/utils/dom.js" "dom.js"
+    download_file "$BASE_URL/web/static/js/utils/format.js" "$INSTALL_DIR/web/static/js/utils/format.js" "format.js"
+    download_file "$BASE_URL/web/static/js/utils/validation.js" "$INSTALL_DIR/web/static/js/utils/validation.js" "validation.js"
 
     # Download component JS files
     for component in modals toasts sidebar agents-list agent-detail agent-form terminal backups providers audit-log; do
-        curl -fsSL "$BASE_URL/web/static/js/components/${component}.js" -o "$INSTALL_DIR/web/static/js/components/${component}.js" || warn "Failed to download ${component}.js"
+        download_file "$BASE_URL/web/static/js/components/${component}.js" "$INSTALL_DIR/web/static/js/components/${component}.js" "${component}.js"
     done
 
     # Also try to copy from local directory if available (for development)
@@ -243,7 +259,22 @@ copy_web_files() {
 
     chown -R "$USER:$GROUP" "$INSTALL_DIR/web" 2>/dev/null || true
     chmod -R 755 "$INSTALL_DIR/web" 2>/dev/null || true
-    log "Web files installed"
+
+    # Verify files exist
+    log "Verifying installation..."
+    local missing=0
+    for file in index.html css/dashboard.css js/api.js js/app.js js/state.js; do
+        if [ ! -f "$INSTALL_DIR/web/static/$file" ]; then
+            warn "Missing: $file"
+            missing=$((missing + 1))
+        fi
+    done
+
+    if [ $missing -gt 0 ]; then
+        error "$missing web files failed to download. Check your internet connection."
+    fi
+
+    log "Web files installed successfully"
 }
 
 build_from_source() {
