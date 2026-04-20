@@ -3,6 +3,7 @@ set -e
 
 # OpenClaw Manager Installer
 # Usage: curl -sSL https://raw.githubusercontent.com/openclaw/manager/main/install.sh | bash
+# Supports: Debian/Ubuntu, Arch/Manjaro, Fedora/RHEL
 
 set -e
 
@@ -16,6 +17,10 @@ PORT="11436"
 
 log() {
     echo "[*] $1"
+}
+
+warn() {
+    echo "[!] $1" >&2
 }
 
 error() {
@@ -32,22 +37,145 @@ check_root() {
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        OS="$ID"
     else
-        OS="unknown"
+        ID="unknown"
     fi
+    case "$ID" in
+        debian|ubuntu|linuxmint)
+            PKG_MANAGER="apt"
+            ;;
+        arch|manjaro|endeavouros)
+            PKG_MANAGER="pacman"
+            ;;
+        fedora|rhel|centos|rocky|almalinux)
+            PKG_MANAGER="dnf"
+            ;;
+        opensuse*|sles)
+            PKG_MANAGER="zypper"
+            ;;
+        *)
+            PKG_MANAGER=""
+            ;;
+    esac
+    OS="$ID"
+    log "Detected OS: $OS (package manager: ${PKG_MANAGER:-none})"
+}
+
+check_curl() {
+    if ! command -v curl &> /dev/null; then
+        log "curl not found, installing..."
+        case "$PKG_MANAGER" in
+            apt) apt-get update && apt-get install -y curl ;;
+            pacman) pacman -Sy --noconfirm curl ;;
+            dnf) dnf install -y curl ;;
+            zypper) zypper install -y curl ;;
+            *) error "Cannot install curl - please install it manually" ;;
+        esac
+    fi
+    log "curl available"
+}
+
+install_docker() {
+    if command -v docker &> /dev/null; then
+        log "Docker is already installed"
+        return 0
+    fi
+
+    log "Installing Docker..."
+
+    # Try get.docker.com first (works on most distros)
+    if curl -fsSL https://get.docker.com -o /tmp/get-docker.sh 2>/dev/null; then
+        sh /tmp/get-docker.sh --no-deps 2>/dev/null || true
+        rm -f /tmp/get-docker.sh
+    fi
+
+    # Fallback to OS package manager
+    if ! command -v docker &> /dev/null; then
+        case "$PKG_MANAGER" in
+            apt)
+                apt-get update
+                apt-get install -y docker.io docker-compose-plugin
+                ;;
+            pacman)
+                pacman -Sy --noconfirm docker docker-compose
+                ;;
+            dnf)
+                dnf install -y docker docker-compose-plugin
+                ;;
+            zypper)
+                zypper install -y docker docker-compose
+                ;;
+            *)
+                error "Docker not found and cannot install automatically. Please install Docker first: https://docs.docker.com/get-docker/"
+                ;;
+        esac
+    fi
+
+    # Enable and start docker
+    systemctl enable docker --now 2>/dev/null || true
+
+    # Wait for docker to be ready
+    for i in {1..30}; do
+        if docker info &>/dev/null; then
+            log "Docker is running"
+            return 0
+        fi
+        sleep 1
+    done
+
+    error "Docker installed but daemon is not responding"
 }
 
 check_docker() {
     if ! command -v docker &> /dev/null; then
-        error "Docker is not installed. Please install Docker first: https://docs.docker.com/get-docker/"
+        install_docker
     fi
 
     if ! docker info &> /dev/null; then
-        error "Docker daemon is not running. Please start Docker."
+        error "Docker daemon is not running. Please start Docker: sudo systemctl start docker"
     fi
 
-    log "Docker is available"
+    log "Docker is available and running"
+}
+
+check_dependencies() {
+    log "Checking dependencies..."
+
+    # Check for systemctl (systemd)
+    if ! command -v systemctl &> /dev/null; then
+        error "systemd is required but not found"
+    fi
+
+    # Check for openssl (for secret key generation)
+    if ! command -v openssl &> /dev/null; then
+        log "openssl not found, installing..."
+        case "$PKG_MANAGER" in
+            apt) apt-get update && apt-get install -y openssl ;;
+            pacman) pacman -Sy --noconfirm openssl ;;
+            dnf) dnf install -y openssl ;;
+            zypper) zypper install -y openssl ;;
+        esac
+    fi
+
+    # Check for useradd
+    if ! command -v useradd &> /dev/null; then
+        case "$PKG_MANAGER" in
+            apt) apt-get update && apt-get install -y passwd ;;
+            pacman) pacman -Sy --noconfirm shadow ;;
+            dnf) dnf install -y shadow-utils ;;
+        esac
+    fi
+
+    # Check for groupadd
+    if ! command -v groupadd &> /dev/null; then
+        case "$PKG_MANAGER" in
+            apt) apt-get update && apt-get install -y passwd ;;
+            pacman) pacman -Sy --noconfirm shadow ;;
+            dnf) dnf install -y shadow-utils ;;
+        esac
+    fi
+
+    log "All dependencies satisfied"
 }
 
 create_user() {
@@ -189,6 +317,8 @@ main() {
 
     check_root
     detect_os
+    check_curl
+    check_dependencies
     check_docker
     create_user
     create_dirs
@@ -201,7 +331,8 @@ main() {
     log "=========================================="
     log "OpenClaw Manager installed successfully!"
     log ""
-    log "Access the UI at: http://127.0.0.1:${PORT}"
+    log "Access the UI at: http://<your-ip>:${PORT}"
+    log "Or on Tailscale: http://<tailscale-ip>:${PORT}"
     log ""
     log "To check status: systemctl status openclaw-manager"
     log "To view logs: journalctl -u openclaw-manager -f"
