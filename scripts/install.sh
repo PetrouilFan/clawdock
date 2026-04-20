@@ -220,16 +220,17 @@ download_binary() {
         log "No release asset found, building from source..."
 
         # Always install Go 1.23 from official site to guarantee compatibility
-        if ! /usr/local/go/bin/go version &>/dev/null || [[ "$(/usr/local/go/bin/go version 2>/dev/null)" =~ go1\.(19|20|21|22)\. ]]; then
-            log "Installing Go 1.23..."
-            curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz
+        GO_VERSION=$(/usr/local/go/bin/go version 2>/dev/null | grep -oP 'go1\.\d+' || echo "none")
+        if [[ "$GO_VERSION" != "go1.23"* && "$GO_VERSION" != "go1.24"* && "$GO_VERSION" != "go1.25"* && "$GO_VERSION" != "go1.26"* ]]; then
+            log "Installing Go 1.23 (current: $GO_VERSION)..."
+            curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz || error "Failed to download Go"
             rm -rf /usr/local/go
-            tar -C /usr/local -xzf /tmp/go.tar.gz
+            tar -C /usr/local -xzf /tmp/go.tar.gz || error "Failed to extract Go"
             rm /tmp/go.tar.gz
-            log "Go installed: $(/usr/local/go/bin/go version)"
         fi
 
         export PATH=/usr/local/go/bin:$PATH
+        log "Using Go: $(/usr/local/go/bin/go version)"
 
         if ! command -v make &> /dev/null; then
             log "make not found, installing..."
@@ -268,6 +269,8 @@ download_binary() {
         log "Building..."
         cd "$TMPDIR"
         export PATH=/usr/local/go/bin:$PATH
+        log "Go version: $(/usr/local/go/bin/go version)"
+        log "Building binary..."
         if ! /usr/local/go/bin/go build -mod=mod -o openclaw-manager ./cmd/server 2>&1; then
             cd / 2>/dev/null
             rm -rf "$TMPDIR" 2>/dev/null || true
