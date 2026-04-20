@@ -219,9 +219,9 @@ download_binary() {
     if [ -z "$ASSET_URL" ]; then
         log "No release asset found, building from source..."
 
-        # Always install Go 1.23 from official site to guarantee compatibility
-        log "Installing Go 1.23 from go.dev..."
-        curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz || error "Failed to download Go"
+        # Always install latest Go from official site to guarantee compatibility
+        log "Installing Go 1.26 from go.dev..."
+        curl -fsSL https://go.dev/dl/go1.26.2.linux-amd64.tar.gz -o /tmp/go.tar.gz || error "Failed to download Go"
         rm -rf /usr/local/go
         tar -C /usr/local -xzf /tmp/go.tar.gz || error "Failed to extract Go"
         rm /tmp/go.tar.gz
