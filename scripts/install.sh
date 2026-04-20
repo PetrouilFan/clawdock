@@ -231,30 +231,52 @@ download_binary() {
             esac
         fi
 
+        # Check for git
+        if ! command -v git &> /dev/null; then
+            log "git not found, installing..."
+            case "$PKG_MANAGER" in
+                apt) apt-get update && apt-get install -y git ;;
+                pacman) pacman -Sy --noconfirm git ;;
+                dnf) dnf install -y git ;;
+                zypper) zypper install -y git ;;
+            esac
+        fi
+
         # Clone and build
         TMPDIR=$(mktemp -d)
-        git clone --depth 1 https://github.com/PetrouilFan/clawdock.git "$TMPDIR"
-        if [ -d "$TMPDIR" ] && [ -f "$TMPDIR/Makefile" ]; then
-            cd "$TMPDIR"
-            make build 2>/dev/null || go build -o "$INSTALL_DIR/openclaw-manager" ./cmd/server
-            if [ -f "$TMPDIR/openclaw-manager" ]; then
-                mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager"
-            elif [ -f "$TMPDIR/openclaw-manager-linux-amd64" ]; then
-                mv "$TMPDIR/openclaw-manager-linux-amd64" "$INSTALL_DIR/openclaw-manager"
-            else
-                cd /
-                rm -rf "$TMPDIR"
-                error "Build failed - binary not found"
-            fi
-            chmod +x "$INSTALL_DIR/openclaw-manager"
-            cd /
-            rm -rf "$TMPDIR"
-            log "Built openclaw-manager from source"
-        else
-            cd /
+        log "Cloning repository to $TMPDIR..."
+        if ! git clone --depth 1 https://github.com/PetrouilFan/clawdock.git "$TMPDIR"; then
+            cd / 2>/dev/null
             rm -rf "$TMPDIR" 2>/dev/null || true
             error "Failed to clone repository"
         fi
+        if [ ! -d "$TMPDIR" ] || [ ! -f "$TMPDIR/Makefile" ]; then
+            cd / 2>/dev/null
+            rm -rf "$TMPDIR" 2>/dev/null || true
+            error "Clone failed or Makefile not found"
+        fi
+        log "Building..."
+        cd "$TMPDIR"
+        if ! make build 2>&1; then
+            if ! go build -o "$INSTALL_DIR/openclaw-manager" ./cmd/server 2>&1; then
+                cd / 2>/dev/null
+                rm -rf "$TMPDIR" 2>/dev/null || true
+                error "Build failed"
+            fi
+        fi
+        if [ -f "$TMPDIR/openclaw-manager" ]; then
+            mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager"
+        elif [ -f "$TMPDIR/openclaw-manager-linux-amd64" ]; then
+            mv "$TMPDIR/openclaw-manager-linux-amd64" "$INSTALL_DIR/openclaw-manager"
+        else
+            cd / 2>/dev/null
+            rm -rf "$TMPDIR" 2>/dev/null || true
+            error "Build succeeded but binary not found"
+        fi
+        chmod +x "$INSTALL_DIR/openclaw-manager"
+        cd /
+        rm -rf "$TMPDIR"
+        log "Built openclaw-manager from source"
     else
         curl -sSL "$ASSET_URL" -o "$INSTALL_DIR/openclaw-manager"
         chmod +x "$INSTALL_DIR/openclaw-manager"
