@@ -219,7 +219,7 @@ download_binary() {
     if [ -z "$ASSET_URL" ]; then
         log "No release asset found, building from source..."
 
-        # Check for Go
+        # Check for Go and make
         if ! command -v go &> /dev/null; then
             log "Go not found, installing..."
             case "$PKG_MANAGER" in
@@ -228,6 +228,16 @@ download_binary() {
                 dnf) dnf install -y go ;;
                 zypper) zypper install -y go ;;
                 *) error "Go is required to build from source. Install it from https://go.dev/doc/install" ;;
+            esac
+        fi
+
+        if ! command -v make &> /dev/null; then
+            log "make not found, installing..."
+            case "$PKG_MANAGER" in
+                apt) apt-get update && apt-get install -y make ;;
+                pacman) pacman -Sy --noconfirm make ;;
+                dnf) dnf install -y make ;;
+                zypper) zypper install -y make ;;
             esac
         fi
 
