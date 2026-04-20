@@ -21,7 +21,7 @@ A local control-plane webapp for managing multiple Dockerized OpenClaw agents fr
 ## Quick Install
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/openclaw/manager/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/PetrouilFan/clawdock/main/install.sh | bash
 ```
 
 The installer will:
@@ -38,8 +38,8 @@ After installation, access the UI at **http://127.0.0.1:11436**
 ### Build from Source
 
 ```bash
-git clone https://github.com/openclaw/manager.git
-cd manager
+git clone https://github.com/PetrouilFan/clawdock.git
+cd clawdock
 make build
 sudo make install
 ```
@@ -217,7 +217,7 @@ ws.send('ls\n');
 
 ## Security
 
-- Default bind to localhost only
+- Bind address `0.0.0.0` for network access (Tailscale, etc.)
 - Rate limiting (100 req/min per IP)
 - Security headers on all responses
 - Input sanitization
