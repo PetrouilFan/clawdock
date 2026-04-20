@@ -55,8 +55,14 @@ install: build
 # Create release tarballs
 release: build-linux build-arm64 clean
 	mkdir -p release
+	mkdir -p $(BINARY_NAME)-linux-amd64/web/static
+	mkdir -p $(BINARY_NAME)-linux-arm64/web/static
+	cp $(BINARY_NAME)-linux-amd64 $(BINARY_NAME)-linux-amd64/openclaw-manager
+	cp $(BINARY_NAME)-linux-arm64 $(BINARY_NAME)-linux-arm64/openclaw-manager
+	cp -r web/static/* $(BINARY_NAME)-linux-amd64/web/static/ 2>/dev/null || true
+	cp -r web/static/* $(BINARY_NAME)-linux-arm64/web/static/ 2>/dev/null || true
 	tar -czf release/$(BINARY_NAME)-linux-amd64.tar.gz $(BINARY_NAME)-linux-amd64
 	tar -czf release/$(BINARY_NAME)-linux-arm64.tar.gz $(BINARY_NAME)-linux-arm64
-	rm $(BINARY_NAME)-linux-*
+	rm -rf $(BINARY_NAME)-linux-*
 	cd release && sha256sum * > checksums.txt
 	@echo "Release files created in release/"

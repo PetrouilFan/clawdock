@@ -209,12 +209,34 @@ create_dirs() {
 
 copy_web_files() {
     log "Installing web static files..."
-    mkdir -p "$INSTALL_DIR/web/static"
+    mkdir -p "$INSTALL_DIR/web/static/css"
+    mkdir -p "$INSTALL_DIR/web/static/js/components"
+    mkdir -p "$INSTALL_DIR/web/static/js/utils"
 
-    # Download web files from repo
-    curl -fsSL "https://raw.githubusercontent.com/PetrouilFan/clawdock/main/web/static/index.html" -o "$INSTALL_DIR/web/static/index.html" 2>/dev/null || true
+    local BASE_URL="https://raw.githubusercontent.com/PetrouilFan/clawdock/main"
 
-    # Also try to copy from build directory if available
+    # Download index.html
+    curl -fsSL "$BASE_URL/web/static/index.html" -o "$INSTALL_DIR/web/static/index.html" || warn "Failed to download index.html"
+
+    # Download CSS
+    curl -fsSL "$BASE_URL/web/static/css/dashboard.css" -o "$INSTALL_DIR/web/static/css/dashboard.css" || warn "Failed to download dashboard.css"
+
+    # Download core JS files
+    curl -fsSL "$BASE_URL/web/static/js/api.js" -o "$INSTALL_DIR/web/static/js/api.js" || warn "Failed to download api.js"
+    curl -fsSL "$BASE_URL/web/static/js/app.js" -o "$INSTALL_DIR/web/static/js/app.js" || warn "Failed to download app.js"
+    curl -fsSL "$BASE_URL/web/static/js/state.js" -o "$INSTALL_DIR/web/static/js/state.js" || warn "Failed to download state.js"
+
+    # Download utility JS files
+    curl -fsSL "$BASE_URL/web/static/js/utils/dom.js" -o "$INSTALL_DIR/web/static/js/utils/dom.js" || warn "Failed to download dom.js"
+    curl -fsSL "$BASE_URL/web/static/js/utils/format.js" -o "$INSTALL_DIR/web/static/js/utils/format.js" || warn "Failed to download format.js"
+    curl -fsSL "$BASE_URL/web/static/js/utils/validation.js" -o "$INSTALL_DIR/web/static/js/utils/validation.js" || warn "Failed to download validation.js"
+
+    # Download component JS files
+    for component in modals toasts sidebar agents-list agent-detail agent-form terminal backups providers audit-log; do
+        curl -fsSL "$BASE_URL/web/static/js/components/${component}.js" -o "$INSTALL_DIR/web/static/js/components/${component}.js" || warn "Failed to download ${component}.js"
+    done
+
+    # Also try to copy from local directory if available (for development)
     if [ -d "web/static" ]; then
         cp -r web/static/* "$INSTALL_DIR/web/static/" 2>/dev/null || true
     fi
