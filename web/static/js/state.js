@@ -197,6 +197,11 @@ const state = (() => {
     const agents = get('agents');
     const filters = get('filters.agents');
 
+    if (!Array.isArray(agents)) {
+      console.warn('Expected agents to be array, got:', typeof agents, agents);
+      return [];
+    }
+
     return agents.filter((agent) => {
       // Search filter
       if (filters.search) {

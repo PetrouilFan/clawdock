@@ -34,6 +34,10 @@ const agentForm = (() => {
   }
 
   function populateProviderSelects() {
+    if (!Array.isArray(providers)) {
+      console.warn('populateProviderSelects: providers is not an array', providers);
+      return;
+    }
     const selects = document.querySelectorAll('.provider-select');
     selects.forEach((select) => {
       select.innerHTML = `

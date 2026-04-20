@@ -35,7 +35,7 @@ const providers = (() => {
     const container = document.getElementById('providers-content');
     if (!container) return;
 
-    if (providers.length === 0) {
+    if (!Array.isArray(providers) || providers.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">🔌</div>

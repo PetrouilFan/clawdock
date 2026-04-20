@@ -127,6 +127,11 @@ const auditLog = (() => {
   function getFilteredEntries() {
     const filters = state.get('filters.audit');
 
+    if (!Array.isArray(entries)) {
+      console.warn('Expected entries to be array, got:', typeof entries);
+      return [];
+    }
+
     return entries.filter(entry => {
       if (filters.action !== 'all' && !entry.action.includes(filters.action)) {
         return false;
@@ -139,7 +144,9 @@ const auditLog = (() => {
   }
 
   function getAgentName(agentId) {
-    const agent = state.get('agents').find(a => a.id === agentId);
+    const agents = state.get('agents');
+    if (!Array.isArray(agents)) return agentId.slice(0, 8);
+    const agent = agents.find(a => a.id === agentId);
     return agent ? agent.name : agentId.slice(0, 8);
   }
 
