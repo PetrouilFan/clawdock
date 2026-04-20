@@ -35,8 +35,9 @@ const api = (() => {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
-        // Validate response is array for list endpoints
-        if (endpoint.includes('/api/') && !endpoint.includes('/api/agents/')) {
+        // Ensure we always return an array for list endpoints
+        if (endpoint.includes('/api/')) {
+          if (data === null) return [];
           if (!Array.isArray(data)) {
             console.warn(`Expected array from ${endpoint}, got:`, typeof data, data);
             return [];
@@ -45,10 +46,13 @@ const api = (() => {
         return data;
       }
 
-      // If not JSON, log warning and return empty array
+      // Non-JSON responses - return text for plain endpoints, empty array for lists
       const text = await response.text();
-      console.warn(`Non-JSON response from ${endpoint}:`, text.substring(0, 200));
-      return [];
+      if (endpoint.includes('/api/')) {
+        console.warn(`Non-JSON response from ${endpoint}:`, text.substring(0, 200));
+        return [];
+      }
+      return text;
     } catch (error) {
       console.error(`API Error: ${endpoint}`, error);
       throw error;
