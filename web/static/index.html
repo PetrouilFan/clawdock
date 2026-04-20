@@ -376,34 +376,21 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- JavaScript Modules -->
-    <script>
-        // Debug: Log script loading
-        window._loadedScripts = [];
-        window._failedScripts = [];
-        function logScript(src) {
-            window._loadedScripts.push(src);
-            console.log('[✓ Script Loaded]', src);
-        }
-        function failScript(src) {
-            window._failedScripts.push(src);
-            console.error('[✗ Script Failed]', src);
-        }
-    </script>
-    <script src="/js/utils/dom.js" onload="logScript('dom.js')" onerror="failScript('dom.js')"></script>
-    <script src="/js/utils/format.js" onload="logScript('format.js')" onerror="failScript('format.js')"></script>
-    <script src="/js/utils/validation.js" onload="logScript('validation.js')" onerror="failScript('validation.js')"></script>
-    <script src="/js/api.js" onload="logScript('api.js')" onerror="failScript('api.js')"></script>
-    <script src="/js/state.js" onload="logScript('state.js')" onerror="failScript('state.js')"></script>
-    <script src="/js/components/modals.js" onload="logScript('modals.js')" onerror="failScript('modals.js')"></script>
-    <script src="/js/components/toasts.js" onload="logScript('toasts.js')" onerror="failScript('toasts.js')"></script>
-    <script src="/js/components/sidebar.js" onload="logScript('sidebar.js')" onerror="failScript('sidebar.js')"></script>
-    <script src="/js/components/agents-list.js" onload="logScript('agents-list.js')" onerror="failScript('agents-list.js')"></script>
-    <script src="/js/components/agent-detail.js" onload="logScript('agent-detail.js')" onerror="failScript('agent-detail.js')"></script>
-    <script src="/js/components/agent-form.js" onload="logScript('agent-form.js')" onerror="failScript('agent-form.js')"></script>
-    <script src="/js/components/terminal.js" onload="logScript('terminal.js')" onerror="failScript('terminal.js')"></script>
-    <script src="/js/components/backups.js" onload="logScript('backups.js')" onerror="failScript('backups.js')"></script>
-    <script src="/js/components/providers.js" onload="logScript('providers.js')" onerror="failScript('providers.js')"></script>
-    <script src="/js/components/audit-log.js" onload="logScript('audit-log.js')" onerror="failScript('audit-log.js')"></script>
-    <script src="/js/app.js" onload="logScript('app.js')" onerror="failScript('app.js')"></script>
+    <script src="/js/utils/dom.js"></script>
+    <script src="/js/utils/format.js"></script>
+    <script src="/js/utils/validation.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/state.js"></script>
+    <script src="/js/components/modals.js"></script>
+    <script src="/js/components/toasts.js"></script>
+    <script src="/js/components/sidebar.js"></script>
+    <script src="/js/components/agents-list.js"></script>
+    <script src="/js/components/agent-detail.js"></script>
+    <script src="/js/components/agent-form.js"></script>
+    <script src="/js/components/terminal.js"></script>
+    <script src="/js/components/backups.js"></script>
+    <script src="/js/components/providers.js"></script>
+    <script src="/js/components/audit-log.js"></script>
+    <script src="/js/app.js"></script>
 </body>
 </html>
