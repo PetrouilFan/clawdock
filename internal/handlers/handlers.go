@@ -3,6 +3,8 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -79,10 +81,30 @@ func (h *Handler) SetupRoutes() *mux.Router {
 	r.HandleFunc("/readyz", h.Readyz)
 	r.HandleFunc("/version", h.Version).Methods("GET")
 
-	// Static files
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir("web/static")))
+	// Static files - serve from directory relative to executable
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(getStaticDir()))))
 
 	return r
+}
+
+func getStaticDir() string {
+	// Try executable directory first
+	execPath, err := os.Executable()
+	if err == nil {
+		staticDir := filepath.Join(filepath.Dir(execPath), "web", "static")
+		if _, err := os.Stat(staticDir); err == nil {
+			return staticDir
+		}
+	}
+	// Fallback to current working directory
+	if _, err := os.Stat("web/static"); err == nil {
+		return "web/static"
+	}
+	// Fallback to /var/lib/openclaw-manager/web/static (packaged install)
+	if _, err := os.Stat("/var/lib/openclaw-manager/web/static"); err == nil {
+		return "/var/lib/openclaw-manager/web/static"
+	}
+	return "web/static"
 }
 
 func (h *Handler) Healthz(w http.ResponseWriter, r *http.Request) {
