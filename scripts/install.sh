@@ -270,12 +270,14 @@ download_binary() {
         cd "$TMPDIR"
         export PATH=/usr/local/go/bin:$PATH
         log "Go version: $(/usr/local/go/bin/go version)"
-        log "Building binary..."
+        log "Building binary directly (not via make)..."
+        log "Go version: $(/usr/local/go/bin/go version)"
         if ! /usr/local/go/bin/go build -mod=mod -o openclaw-manager ./cmd/server 2>&1; then
             cd / 2>/dev/null
             rm -rf "$TMPDIR" 2>/dev/null || true
             error "Build failed"
         fi
+        ls -la openclaw-manager 2>&1 || error "Binary not found after build"
         if [ -f "$TMPDIR/openclaw-manager" ]; then
             mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager"
         elif [ -f "$TMPDIR/openclaw-manager-linux-amd64" ]; then
