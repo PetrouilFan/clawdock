@@ -219,16 +219,17 @@ download_binary() {
     if [ -z "$ASSET_URL" ]; then
         log "No release asset found, building from source..."
 
-        # Check for Go and make
-        if ! command -v go &> /dev/null || [[ "$(go version 2>/dev/null)" =~ go1\.(19|20|21|22)\. ]]; then
-            log "Go not found or too old, installing Go 1.23..."
+        # Always install Go 1.23 from official site to guarantee compatibility
+        if ! /usr/local/go/bin/go version &>/dev/null || [[ "$(/usr/local/go/bin/go version 2>/dev/null)" =~ go1\.(19|20|21|22)\. ]]; then
+            log "Installing Go 1.23..."
             curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz
             rm -rf /usr/local/go
             tar -C /usr/local -xzf /tmp/go.tar.gz
             rm /tmp/go.tar.gz
-            export PATH=/usr/local/go/bin:$PATH
             log "Go installed: $(/usr/local/go/bin/go version)"
         fi
+
+        export PATH=/usr/local/go/bin:$PATH
 
         if ! command -v make &> /dev/null; then
             log "make not found, installing..."
@@ -267,7 +268,7 @@ download_binary() {
         log "Building..."
         cd "$TMPDIR"
         export PATH=/usr/local/go/bin:$PATH
-        if ! /usr/local/go/bin/go build -mod=mod -o "$INSTALL_DIR/openclaw-manager" ./cmd/server 2>&1; then
+        if ! /usr/local/go/bin/go build -mod=mod -o openclaw-manager ./cmd/server 2>&1; then
             cd / 2>/dev/null
             rm -rf "$TMPDIR" 2>/dev/null || true
             error "Build failed"
