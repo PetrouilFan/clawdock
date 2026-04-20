@@ -88,7 +88,7 @@ func (h *Handler) SetupRoutes() *mux.Router {
 }
 
 func getStaticDir() string {
-	// Try executable directory first
+	// Always use the directory relative to the executable
 	execPath, err := os.Executable()
 	if err == nil {
 		staticDir := filepath.Join(filepath.Dir(execPath), "web", "static")
@@ -96,14 +96,11 @@ func getStaticDir() string {
 			return staticDir
 		}
 	}
-	// Fallback to current working directory
-	if _, err := os.Stat("web/static"); err == nil {
-		return "web/static"
-	}
-	// Fallback to /var/lib/openclaw-manager/web/static (packaged install)
+	// Fallback: /var/lib for packaged installs
 	if _, err := os.Stat("/var/lib/openclaw-manager/web/static"); err == nil {
 		return "/var/lib/openclaw-manager/web/static"
 	}
+	// Fallback to embedded web/static for dev
 	return "web/static"
 }
 
