@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -46,6 +47,7 @@ func generateRequestID() string {
 // RateLimiter provides basic rate limiting per IP
 type RateLimiter struct {
 	requests map[string][]time.Time
+	mu       sync.RWMutex
 	limit    int
 	window   time.Duration
 }
@@ -64,6 +66,9 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := getClientIP(r)
 		now := time.Now()
+
+		rl.mu.Lock()
+		defer rl.mu.Unlock()
 
 		var valid []time.Time
 		for _, t := range rl.requests[ip] {
