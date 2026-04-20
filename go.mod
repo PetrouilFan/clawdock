@@ -1,6 +1,6 @@
 module clawdock
 
-go 1.25.5
+go 1.23
 
 require (
 	github.com/fsouza/go-dockerclient v1.13.1
