@@ -25,7 +25,7 @@ func (c *Client) GetContainerIDByLabel(labelKey, labelValue string) (string, err
 }
 
 func (c *Client) Ping() error {
-	return c.Ping()
+	return c.Client.Ping()
 }
 
 type ContainerState struct {

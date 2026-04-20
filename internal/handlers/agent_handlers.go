@@ -41,6 +41,7 @@ func (h *Handler) ListAgents(w http.ResponseWriter, r *http.Request) {
 		agents = append(agents, a)
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(agents)
 }
 
@@ -77,6 +78,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 
 	database.AuditLogEntry(h.db, "system", "create_agent", id, fmt.Sprintf("Created agent %s", input.Name), "success", nil)
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
@@ -98,6 +100,7 @@ func (h *Handler) GetAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(a)
 }
 
