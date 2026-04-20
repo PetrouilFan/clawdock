@@ -85,7 +85,7 @@ install_docker() {
 
     # Try get.docker.com first (works on most distros)
     if curl -fsSL https://get.docker.com -o /tmp/get-docker.sh 2>/dev/null; then
-        sh /tmp/get-docker.sh --no-deps 2>/dev/null || true
+        sh /tmp/get-docker.sh 2>/dev/null || true
         rm -f /tmp/get-docker.sh
     fi
 
