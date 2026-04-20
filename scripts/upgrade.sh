@@ -56,7 +56,7 @@ restart_service() {
     systemctl restart openclaw-manager.service
 
     for i in {1..30}; do
-        if curl -s http://127.0.0.1:${PORT}/healthz &> /dev/null; then
+        if curl -s http://0.0.0.0:${PORT}/healthz &> /dev/null; then
             log "Service is healthy after upgrade"
             return 0
         fi

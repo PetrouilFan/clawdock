@@ -103,7 +103,7 @@ write_config() {
 
     cat > "$CONFIG_DIR/config.yaml" << EOF
 server:
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: ${PORT}
 
 database:
@@ -176,7 +176,7 @@ enable_service() {
 
     # Wait for health check
     for i in {1..30}; do
-        if curl -s http://127.0.0.1:${PORT}/healthz &> /dev/null; then
+        if curl -s http://0.0.0.0:${PORT}/healthz &> /dev/null; then
             log "Service is healthy"
             break
         fi

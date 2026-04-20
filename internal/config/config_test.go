@@ -32,8 +32,8 @@ database:
 	}
 
 	// Check defaults applied
-	if cfg.Server.Host != "127.0.0.1" {
-		t.Errorf("Server.Host = %q, want %q", cfg.Server.Host, "127.0.0.1")
+	if cfg.Server.Host != "0.0.0.0" {
+		t.Errorf("Server.Host = %q, want %q", cfg.Server.Host, "0.0.0.0")
 	}
 	if cfg.Server.Port != "11437" {
 		t.Errorf("Server.Port = %q, want %q", cfg.Server.Port, "11437")
@@ -107,7 +107,7 @@ func TestLoadEmptyFile(t *testing.T) {
 	}
 
 	// Should get defaults even with empty file
-	if cfg.Server.Host != "127.0.0.1" {
+	if cfg.Server.Host != "0.0.0.0" {
 		t.Errorf("Server.Host = %q, want default", cfg.Server.Host)
 	}
 }
