@@ -21,7 +21,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline' unpkg.com cdn.jsdelivr.net; script-src 'self' unpkg.com cdn.jsdelivr.net 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:;")
 
 		next.ServeHTTP(w, r)
 	})
