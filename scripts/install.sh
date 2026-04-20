@@ -207,6 +207,98 @@ create_dirs() {
     chmod 755 "$DATA_DIR"
 }
 
+copy_web_files() {
+    log "Installing web static files..."
+    mkdir -p "$INSTALL_DIR/web/static"
+
+    # Download web files from repo
+    curl -fsSL "https://raw.githubusercontent.com/PetrouilFan/clawdock/main/web/static/index.html" -o "$INSTALL_DIR/web/static/index.html" 2>/dev/null || true
+
+    # Also try to copy from build directory if available
+    if [ -d "web/static" ]; then
+        cp -r web/static/* "$INSTALL_DIR/web/static/" 2>/dev/null || true
+    fi
+
+    chown -R "$USER:$GROUP" "$INSTALL_DIR/web" 2>/dev/null || true
+    chmod -R 755 "$INSTALL_DIR/web" 2>/dev/null || true
+    log "Web files installed"
+}
+
+build_from_source() {
+    log "Building openclaw-manager from source..."
+
+    # Always install latest Go from official site to guarantee compatibility
+    log "Installing Go 1.26 from go.dev..."
+    curl -fsSL https://go.dev/dl/go1.26.2.linux-amd64.tar.gz -o /tmp/go.tar.gz || error "Failed to download Go"
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf /tmp/go.tar.gz || error "Failed to extract Go"
+    rm /tmp/go.tar.gz
+    export PATH=/usr/local/go/bin:$PATH
+    log "Go installed: $(/usr/local/go/bin/go version)"
+
+    if ! command -v make &> /dev/null; then
+        log "make not found, installing..."
+        case "$PKG_MANAGER" in
+            apt) apt-get update && apt-get install -y make ;;
+            pacman) pacman -Sy --noconfirm make ;;
+            dnf) dnf install -y make ;;
+            zypper) zypper install -y make ;;
+        esac
+    fi
+
+    # Check for git
+    if ! command -v git &> /dev/null; then
+        log "git not found, installing..."
+        case "$PKG_MANAGER" in
+            apt) apt-get update && apt-get install -y git ;;
+            pacman) pacman -Sy --noconfirm git ;;
+            dnf) dnf install -y git ;;
+            zypper) zypper install -y git ;;
+        esac
+    fi
+
+    # Clone and build
+    TMPDIR=$(mktemp -d)
+    log "Cloning repository to $TMPDIR..."
+    if ! git clone --depth 1 https://github.com/PetrouilFan/clawdock.git "$TMPDIR"; then
+        cd / 2>/dev/null
+        rm -rf "$TMPDIR" 2>/dev/null || true
+        error "Failed to clone repository"
+    fi
+    if [ ! -d "$TMPDIR" ] || [ ! -f "$TMPDIR/Makefile" ]; then
+        cd / 2>/dev/null
+        rm -rf "$TMPDIR" 2>/dev/null || true
+        error "Clone failed or Makefile not found"
+    fi
+    log "Building..."
+    cd "$TMPDIR"
+    export PATH=/usr/local/go/bin:$PATH
+    log "Go version: $(/usr/local/go/bin/go version)"
+    log "Building binary directly (not via make)..."
+    if ! /usr/local/go/bin/go build -mod=mod -o openclaw-manager ./cmd/server 2>&1; then
+        cd / 2>/dev/null
+        rm -rf "$TMPDIR" 2>/dev/null || true
+        error "Build failed"
+    fi
+    ls -la openclaw-manager 2>&1 || error "Binary not found after build"
+    if [ -f "$TMPDIR/openclaw-manager" ]; then
+        mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager"
+    else
+        cd / 2>/dev/null
+        rm -rf "$TMPDIR" 2>/dev/null || true
+        error "Build succeeded but binary not found"
+    fi
+    chmod +x "$INSTALL_DIR/openclaw-manager"
+
+    # Copy web static files
+    mkdir -p "$INSTALL_DIR/web/static"
+    cp -r "$TMPDIR/web/static/"* "$INSTALL_DIR/web/static/" 2>/dev/null || true
+
+    cd /
+    rm -rf "$TMPDIR"
+    log "Built openclaw-manager from source"
+}
+
 download_binary() {
     log "Downloading openclaw-manager ${MANAGER_VERSION}"
 
@@ -217,85 +309,14 @@ download_binary() {
     fi
 
     if [ -z "$ASSET_URL" ]; then
-        log "No release asset found, building from source..."
-
-        # Always install latest Go from official site to guarantee compatibility
-        log "Installing Go 1.26 from go.dev..."
-        curl -fsSL https://go.dev/dl/go1.26.2.linux-amd64.tar.gz -o /tmp/go.tar.gz || error "Failed to download Go"
-        rm -rf /usr/local/go
-        tar -C /usr/local -xzf /tmp/go.tar.gz || error "Failed to extract Go"
-        rm /tmp/go.tar.gz
-        export PATH=/usr/local/go/bin:$PATH
-        log "Go installed: $(/usr/local/go/bin/go version)"
-
-        if ! command -v make &> /dev/null; then
-            log "make not found, installing..."
-            case "$PKG_MANAGER" in
-                apt) apt-get update && apt-get install -y make ;;
-                pacman) pacman -Sy --noconfirm make ;;
-                dnf) dnf install -y make ;;
-                zypper) zypper install -y make ;;
-            esac
-        fi
-
-        # Check for git
-        if ! command -v git &> /dev/null; then
-            log "git not found, installing..."
-            case "$PKG_MANAGER" in
-                apt) apt-get update && apt-get install -y git ;;
-                pacman) pacman -Sy --noconfirm git ;;
-                dnf) dnf install -y git ;;
-                zypper) zypper install -y git ;;
-            esac
-        fi
-
-        # Clone and build
-        TMPDIR=$(mktemp -d)
-        log "Cloning repository to $TMPDIR..."
-        if ! git clone --depth 1 https://github.com/PetrouilFan/clawdock.git "$TMPDIR"; then
-            cd / 2>/dev/null
-            rm -rf "$TMPDIR" 2>/dev/null || true
-            error "Failed to clone repository"
-        fi
-        if [ ! -d "$TMPDIR" ] || [ ! -f "$TMPDIR/Makefile" ]; then
-            cd / 2>/dev/null
-            rm -rf "$TMPDIR" 2>/dev/null || true
-            error "Clone failed or Makefile not found"
-        fi
-        log "Building..."
-        cd "$TMPDIR"
-        export PATH=/usr/local/go/bin:$PATH
-        log "Go version: $(/usr/local/go/bin/go version)"
-        log "Building binary directly (not via make)..."
-        log "Go version: $(/usr/local/go/bin/go version)"
-        if ! /usr/local/go/bin/go build -mod=mod -o openclaw-manager ./cmd/server 2>&1; then
-            cd / 2>/dev/null
-            rm -rf "$TMPDIR" 2>/dev/null || true
-            error "Build failed"
-        fi
-        ls -la openclaw-manager 2>&1 || error "Binary not found after build"
-        if [ -f "$TMPDIR/openclaw-manager" ]; then
-            mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager"
-        elif [ -f "$TMPDIR/openclaw-manager-linux-amd64" ]; then
-            mv "$TMPDIR/openclaw-manager-linux-amd64" "$INSTALL_DIR/openclaw-manager"
-        else
-            cd / 2>/dev/null
-            rm -rf "$TMPDIR" 2>/dev/null || true
-            error "Build succeeded but binary not found"
-        fi
-        chmod +x "$INSTALL_DIR/openclaw-manager"
-
-        # Copy web static files
-        mkdir -p "$INSTALL_DIR/web/static"
-        cp -r "$TMPDIR/web/static/"* "$INSTALL_DIR/web/static/" 2>/dev/null || true
-
-        cd /
-        rm -rf "$TMPDIR"
-        log "Built openclaw-manager from source"
+        build_from_source
     else
         curl -sSL "$ASSET_URL" -o "$INSTALL_DIR/openclaw-manager"
         chmod +x "$INSTALL_DIR/openclaw-manager"
         log "Downloaded to $INSTALL_DIR/openclaw-manager"
+
+        # Download web files separately
+        copy_web_files
     fi
 }
 
@@ -385,9 +406,57 @@ enable_service() {
     done
 }
 
-main() {
-    log "Starting OpenClaw Manager installation"
+check_existing_install() {
+    if [ -f "$INSTALL_DIR/openclaw-manager" ]; then
+        log "Existing installation detected at $INSTALL_DIR"
+        return 0
+    fi
+    return 1
+}
 
+update_installation() {
+    log "Updating OpenClaw Manager..."
+
+    # Stop service before updating
+    if systemctl is-active --quiet openclaw-manager.service 2>/dev/null; then
+        log "Stopping openclaw-manager service..."
+        systemctl stop openclaw-manager.service || true
+    fi
+
+    # Backup current binary
+    if [ -f "$INSTALL_DIR/openclaw-manager" ]; then
+        cp "$INSTALL_DIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager.bak" || true
+    fi
+
+    # Download new binary and web files
+    download_binary
+
+    # Ensure web files are present
+    copy_web_files
+
+    # Reload systemd and restart service
+    systemctl daemon-reload
+    systemctl start openclaw-manager.service
+
+    # Wait for health check
+    for i in {1..30}; do
+        if curl -s http://0.0.0.0:${PORT}/healthz &> /dev/null; then
+            log "Service is healthy after update"
+            rm -f "$INSTALL_DIR/openclaw-manager.bak" 2>/dev/null || true
+            break
+        fi
+        sleep 1
+    done
+
+    log ""
+    log "=========================================="
+    log "OpenClaw Manager updated successfully!"
+    log ""
+    log "Access the UI at: http://<your-ip>:${PORT}"
+    log "=========================================="
+}
+
+main() {
     check_root
     detect_os
     check_curl
@@ -395,21 +464,27 @@ main() {
     check_docker
     create_user
     create_dirs
-    download_binary
-    write_config
-    write_systemd
-    enable_service
 
-    log ""
-    log "=========================================="
-    log "OpenClaw Manager installed successfully!"
-    log ""
-    log "Access the UI at: http://<your-ip>:${PORT}"
-    log "Or on Tailscale: http://<tailscale-ip>:${PORT}"
-    log ""
-    log "To check status: systemctl status openclaw-manager"
-    log "To view logs: journalctl -u openclaw-manager -f"
-    log "=========================================="
+    if check_existing_install; then
+        update_installation
+    else
+        log "Starting OpenClaw Manager installation"
+        download_binary
+        write_config
+        write_systemd
+        enable_service
+
+        log ""
+        log "=========================================="
+        log "OpenClaw Manager installed successfully!"
+        log ""
+        log "Access the UI at: http://<your-ip>:${PORT}"
+        log "Or on Tailscale: http://<tailscale-ip>:${PORT}"
+        log ""
+        log "To check status: systemctl status openclaw-manager"
+        log "To view logs: journalctl -u openclaw-manager -f"
+        log "=========================================="
+    fi
 }
 
 main "$@"
