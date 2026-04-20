@@ -220,15 +220,14 @@ download_binary() {
         log "No release asset found, building from source..."
 
         # Check for Go and make
-        if ! command -v go &> /dev/null; then
-            log "Go not found, installing..."
-            case "$PKG_MANAGER" in
-                apt) apt-get update && apt-get install -y golang-go ;;
-                pacman) pacman -Sy --noconfirm go ;;
-                dnf) dnf install -y go ;;
-                zypper) zypper install -y go ;;
-                *) error "Go is required to build from source. Install it from https://go.dev/doc/install" ;;
-            esac
+        if ! command -v go &> /dev/null || [[ "$(go version 2>/dev/null)" =~ go1\.(19|20|21|22)\. ]]; then
+            log "Go not found or too old, installing Go 1.23..."
+            curl -fsSL https://go.dev/dl/go1.23.6.linux-amd64.tar.gz -o /tmp/go.tar.gz
+            rm -rf /usr/local/go
+            tar -C /usr/local -xzf /tmp/go.tar.gz
+            rm /tmp/go.tar.gz
+            export PATH=/usr/local/go/bin:$PATH
+            log "Go installed: $(/usr/local/go/bin/go version)"
         fi
 
         if ! command -v make &> /dev/null; then
@@ -267,12 +266,11 @@ download_binary() {
         fi
         log "Building..."
         cd "$TMPDIR"
-        if ! make build 2>&1; then
-            if ! go build -o "$INSTALL_DIR/openclaw-manager" ./cmd/server 2>&1; then
-                cd / 2>/dev/null
-                rm -rf "$TMPDIR" 2>/dev/null || true
-                error "Build failed"
-            fi
+        export PATH=/usr/local/go/bin:$PATH
+        if ! /usr/local/go/bin/go build -mod=mod -o "$INSTALL_DIR/openclaw-manager" ./cmd/server 2>&1; then
+            cd / 2>/dev/null
+            rm -rf "$TMPDIR" 2>/dev/null || true
+            error "Build failed"
         fi
         if [ -f "$TMPDIR/openclaw-manager" ]; then
             mv "$TMPDIR/openclaw-manager" "$INSTALL_DIR/openclaw-manager"
