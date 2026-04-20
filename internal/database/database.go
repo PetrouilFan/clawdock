@@ -21,6 +21,10 @@ func Init(path string) (*sql.DB, error) {
 		return nil, err
 	}
 
+	// Limit connections to prevent CGO threading issues
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return nil, err
 	}
