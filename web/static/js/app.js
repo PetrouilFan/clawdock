@@ -36,11 +36,12 @@ const app = (() => {
 
   function checkDependencies() {
     const required = ['api', 'state', 'dom', 'format', 'validation'];
-    const missing = required.filter((dep) => typeof window[dep] === 'undefined');
+    const missing = required.filter((dep) => {
+      try { return typeof eval(dep) === 'undefined'; } catch { return true; }
+    });
 
     if (missing.length > 0) {
       console.error('Missing dependencies:', missing);
-      // Show visible error on page
       const content = document.querySelector('.content');
       if (content) {
         content.innerHTML = `
