@@ -1,11 +1,10 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 # OpenClaw Manager Installer
 # Usage: curl -sSL https://raw.githubusercontent.com/PetrouilFan/clawdock/refs/heads/main/scripts/install.sh | bash
 # Supports: Debian/Ubuntu, Arch/Manjaro, Fedora/RHEL
-
-set -e
 
 MANAGER_VERSION="${MANAGER_VERSION:-latest}"
 INSTALL_DIR="/opt/openclaw-manager"

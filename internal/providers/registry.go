@@ -3,6 +3,7 @@ package providers
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -115,11 +116,15 @@ func (r *Registry) DiscoverAndUpsertModels(providerID string) (map[string]int, e
 		args[len(modelKeys)] = providerID
 		query := fmt.Sprintf(`UPDATE provider_models SET enabled = 0, updated_at = ? 
 			WHERE provider_id = ? AND model_key NOT IN (%s)`, strings.Join(placeholders, ","))
-		r.db.Exec(query, append([]interface{}{now}, args...)...)
+		if _, err := r.db.Exec(query, append([]interface{}{now}, args...)...); err != nil {
+			log.Printf("warning: failed to disable stale models for provider %s: %v", providerID, err)
+		}
 	}
 
 	// Update provider's updated_at
-	r.db.Exec(`UPDATE providers SET updated_at = ? WHERE id = ?`, now, providerID)
+	if _, err := r.db.Exec(`UPDATE providers SET updated_at = ? WHERE id = ?`, now, providerID); err != nil {
+		log.Printf("warning: failed to update provider updated_at: %v", err)
+	}
 
 	return map[string]int{"added": added, "updated": updated, "total": len(modelKeys)}, nil
 }

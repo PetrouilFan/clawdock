@@ -52,15 +52,21 @@ install: build
 	cp $(BINARY_NAME) $(INSTALL_DIR)/
 	cp -r scripts/* $(INSTALL_DIR)/
 
-# Create release tarballs
+# Create release tarballs (unified bundle: binary + web/static + scripts)
 release: build-linux build-arm64 clean
 	mkdir -p release
 	mkdir -p $(BINARY_NAME)-linux-amd64/web/static
 	mkdir -p $(BINARY_NAME)-linux-arm64/web/static
+	mkdir -p $(BINARY_NAME)-linux-amd64/bin
+	mkdir -p $(BINARY_NAME)-linux-arm64/bin
 	cp $(BINARY_NAME)-linux-amd64 $(BINARY_NAME)-linux-amd64/openclaw-manager
 	cp $(BINARY_NAME)-linux-arm64 $(BINARY_NAME)-linux-arm64/openclaw-manager
 	cp -r web/static/* $(BINARY_NAME)-linux-amd64/web/static/ 2>/dev/null || true
 	cp -r web/static/* $(BINARY_NAME)-linux-arm64/web/static/ 2>/dev/null || true
+	cp scripts/*.sh $(BINARY_NAME)-linux-amd64/bin/
+	cp scripts/*.sh $(BINARY_NAME)-linux-arm64/bin/
+	chmod +x $(BINARY_NAME)-linux-amd64/bin/*.sh
+	chmod +x $(BINARY_NAME)-linux-arm64/bin/*.sh
 	tar -czf release/$(BINARY_NAME)-linux-amd64.tar.gz $(BINARY_NAME)-linux-amd64
 	tar -czf release/$(BINARY_NAME)-linux-arm64.tar.gz $(BINARY_NAME)-linux-arm64
 	rm -rf $(BINARY_NAME)-linux-*

@@ -9,7 +9,7 @@ func TestLoadDefaults(t *testing.T) {
 	// Create a minimal config
 	content := `
 server:
-  port: "11437"
+  port: "11436"
 database:
   path: "/tmp/test.db"
 `
@@ -35,8 +35,8 @@ database:
 	if cfg.Server.Host != "0.0.0.0" {
 		t.Errorf("Server.Host = %q, want %q", cfg.Server.Host, "0.0.0.0")
 	}
-	if cfg.Server.Port != "11437" {
-		t.Errorf("Server.Port = %q, want %q", cfg.Server.Port, "11437")
+	if cfg.Server.Port != "11436" {
+		t.Errorf("Server.Port = %q, want %q", cfg.Server.Port, "11436")
 	}
 	if cfg.Database.Path != "/tmp/test.db" {
 		t.Errorf("Database.Path = %q, want %q", cfg.Database.Path, "/tmp/test.db")
@@ -52,7 +52,7 @@ database:
 func TestLoadSecretKey(t *testing.T) {
 	content := `
 server:
-  port: "11437"
+  port: "11436"
 database:
   path: "/tmp/test.db"
 security:

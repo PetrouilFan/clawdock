@@ -19,10 +19,35 @@ type AuditLog struct {
 	CreatedAt   time.Time
 }
 
+// RedactedAuditPayload returns a deep copy of payload with all known secret fields redacted
+func RedactedAuditPayload(payload interface{}) interface{} {
+	if payload == nil {
+		return nil
+	}
+	// Marshal and unmarshal to get a generic map
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil
+	}
+	// Redact all secret field names
+	for k := range m {
+		switch k {
+		case "api_key", "APIKey", "telegram_api_key", "TelegramAPIKey", "secret", "password", "token":
+			m[k] = "[REDACTED]"
+		}
+	}
+	return m
+}
+
 func AuditLogEntry(db *sql.DB, actor, action, agentID, summary, result string, payload interface{}) error {
 	payloadJSON := ""
 	if payload != nil {
-		data, _ := json.Marshal(payload)
+		redacted := RedactedAuditPayload(payload)
+		data, _ := json.Marshal(redacted)
 		payloadJSON = string(data)
 	}
 

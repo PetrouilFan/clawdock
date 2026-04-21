@@ -1,10 +1,9 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 # OpenClaw Manager Upgrader
 # Usage: ./upgrade.sh [version]
-
-set -e
 
 MANAGER_VERSION="${1:-latest}"
 INSTALL_DIR="/opt/openclaw-manager"
@@ -33,9 +32,9 @@ download_binary() {
     cp "$INSTALL_DIR/openclaw-manager" "$BACKUP"
 
     if [ "$MANAGER_VERSION" = "latest" ]; then
-        ASSET_URL=$(curl -sSL "https://api.github.com/repos/openclaw/manager/releases/latest" | grep -o '"browser_download_url": "[^"]*linux-amd64"' | cut -d'"' -f4)
+        ASSET_URL=$(curl -sSL "https://api.github.com/repos/PetrouilFan/clawdock/releases/latest" | grep -o '"browser_download_url": "[^"]*linux-amd64"' | cut -d'"' -f4)
     else
-        ASSET_URL="https://github.com/openclaw/manager/releases/download/${MANAGER_VERSION}/openclaw-manager-linux-amd64"
+        ASSET_URL="https://github.com/PetrouilFan/clawdock/releases/download/${MANAGER_VERSION}/openclaw-manager-linux-amd64"
     fi
 
     if [ -z "$ASSET_URL" ]; then

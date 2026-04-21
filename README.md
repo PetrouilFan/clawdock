@@ -209,7 +209,7 @@ Request format matches OpenAI's API. The response is translated from the provide
 **Example:**
 
 ```bash
-curl -X POST http://localhost:11437/v1/chat/completions \
+curl -X POST http://localhost:11436/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "my-gpt-4",
@@ -232,7 +232,7 @@ If the provider requires authentication (API key or bearer token), you may optio
 For providers with `supports_model_discovery` enabled, you can fetch the list of available models:
 
 ```bash
-curl -X POST http://localhost:11437/api/providers/{provider-id}/refresh-models
+curl -X POST http://localhost:11436/api/providers/{provider-id}/refresh-models
 ```
 
 Models are **added** and **stale models are disabled** (sync exactly). This keeps your model list up-to-date with the remote provider.
@@ -298,7 +298,7 @@ This will:
 You can then test the chat proxy:
 
 ```bash
-curl -X POST http://localhost:11437/v1/chat/completions \
+curl -X POST http://localhost:11436/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"llama3","messages":[{"role":"user","content":"Hello"}]}'
 ```
@@ -319,7 +319,7 @@ curl -X POST http://localhost:11437/v1/chat/completions \
 go run ./cmd/server --config=config.local.yaml
 ```
 
-The server listens on `0.0.0.0:11437` by default.
+The server listens on `0.0.0.0:11436` by default.
 
 ### Building
 

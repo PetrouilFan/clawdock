@@ -157,7 +157,10 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		upstreamReq.Header.Set("x-api-key", apiKey)
 	}
 
-	client := &http.Client{}
+	// Hard timeout to prevent hanging connections on upstream providers
+	client := &http.Client{
+		Timeout: 120 * time.Second,
+	}
 	upstreamResp, err := client.Do(upstreamReq)
 	if err != nil {
 		http.Error(w, "upstream error: "+err.Error(), http.StatusBadGateway)
