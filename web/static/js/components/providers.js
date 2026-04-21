@@ -41,7 +41,9 @@ const providers = (() => {
       const models = await api.providers.listModels(providerId);
       state.setProviderModelsCache(providerId, models);
     } catch (error) {
-      console.error('Failed to load models:', error);
+      // Provider may not support model discovery - silently skip
+      // This happens for built-in providers and providers without discovery enabled
+      console.debug('Skipping model load for provider', providerId, ':', error.message);
     }
   }
 
