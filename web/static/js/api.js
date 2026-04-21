@@ -35,7 +35,6 @@ const api = (() => {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
-        // Ensure we always return an array for list endpoints
         if (endpoint.includes('/api/')) {
           if (data === null) return [];
           if (!Array.isArray(data)) {
@@ -46,7 +45,6 @@ const api = (() => {
         return data;
       }
 
-      // Non-JSON responses - return text for plain endpoints, empty array for lists
       const text = await response.text();
       if (endpoint.includes('/api/')) {
         console.warn(`Non-JSON response from ${endpoint}:`, text.substring(0, 200));
@@ -74,7 +72,6 @@ const api = (() => {
     update: (id, data) => request(`/api/agents/${id}`, { method: 'PATCH', body: data }),
     delete: (id, mode = 'full') => request(`/api/agents/${id}?mode=${mode}`, { method: 'DELETE' }),
 
-    // Lifecycle
     start: (id) => request(`/api/agents/${id}/start`, { method: 'POST' }),
     stop: (id) => request(`/api/agents/${id}/stop`, { method: 'POST' }),
     restart: (id) => request(`/api/agents/${id}/restart`, { method: 'POST' }),
@@ -82,11 +79,9 @@ const api = (() => {
     repair: (id) => request(`/api/agents/${id}/repair`, { method: 'POST' }),
     clone: (id, data) => request(`/api/agents/${id}/clone`, { method: 'POST', body: data }),
 
-    // Utilities
     logs: (id) => request(`/api/agents/${id}/logs`),
     downloadWorkspace: (id) => `${baseUrl}/api/agents/${id}/workspace/download`,
 
-    // Backup/Restore
     createBackup: (id, data) => request(`/api/agents/${id}/backup`, { method: 'POST', body: data }),
     restoreBackup: (id, data) => request(`/api/agents/${id}/restore`, { method: 'POST', body: data }),
   };
@@ -94,7 +89,45 @@ const api = (() => {
   // Providers
   const providers = {
     list: () => request('/api/providers'),
-    models: (id) => request(`/api/providers/${id}/models`),
+    get: (id) => request(`/api/providers/${id}`),
+    create: (data) => request('/api/providers', { method: 'POST', body: data }),
+    update: (id, data) => request(`/api/providers/${id}`, { method: 'PATCH', body: data }),
+    delete: (id) => request(`/api/providers/${id}`, { method: 'DELETE' }),
+    refreshModels: (id) => request(`/api/providers/${id}/refresh-models`, { method: 'POST' }),
+    listModels: (id) => request(`/api/providers/${id}/models`),
+  };
+
+  // Provider Models (individual model toggle)
+  const providerModels = {
+    update: (modelId, data) => request(`/api/provider-models/${modelId}`, { method: 'PATCH', body: data }),
+  };
+
+  // Custom Models
+  const customModels = {
+    list: () => request('/api/custom-models'),
+    create: (alias, data) => request(`/api/custom-models/${alias}`, { method: 'POST', body: data }),
+    get: (alias) => request(`/api/custom-models/${alias}`),
+    update: (alias, data) => request(`/api/custom-models/${alias}`, { method: 'PATCH', body: data }),
+    delete: (alias) => request(`/api/custom-models/${alias}`, { method: 'DELETE' }),
+  };
+
+  // Settings
+  const settings = {
+    getDefaultModel: () => request('/api/settings/default_model'),
+    setDefaultModel: (model) => request('/api/settings/default_model', { method: 'PUT', body: { default_model: model } }),
+    getChatProxyEnabled: () => request('/api/settings/chat_proxy_enabled'),
+    setChatProxyEnabled: (enabled) => request('/api/settings/chat_proxy_enabled', { method: 'PUT', body: { enabled } }),
+  };
+
+  // Chat Proxy (OpenAI-compatible)
+  const chat = {
+    completions: (data) => request('/v1/chat/completions', { method: 'POST', body: data }),
+  };
+
+  // Models (list for /v1/models style)
+  const models = {
+    list: () => request('/v1/models'),
+    status: () => request('/api/models/status'),
   };
 
   // Validation
@@ -117,6 +150,11 @@ const api = (() => {
     health,
     agents,
     providers,
+    providerModels,
+    customModels,
+    settings,
+    chat,
+    models,
     validate,
     audit,
     reconcile,

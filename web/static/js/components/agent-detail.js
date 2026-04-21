@@ -47,7 +47,11 @@ const agentDetail = (() => {
 
     // Render tab content
     if (container) {
-      container.innerHTML = renderTabContent(agent);
+      const html = renderTabContent(agent);
+      container.innerHTML = html;
+      if (currentTab === 'config' && typeof agentForm !== 'undefined' && agentForm.afterRender) {
+        agentForm.afterRender(agent);
+      }
     }
   }
 

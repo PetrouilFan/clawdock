@@ -12,6 +12,7 @@ import (
 
 	"clawdock/internal/config"
 	"clawdock/internal/docker"
+	"clawdock/internal/providers"
 	"clawdock/internal/terminal"
 )
 
@@ -22,18 +23,24 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	cfg    *config.Config
-	db     *sql.DB
-	docker *docker.Client
-	term   *terminal.Terminal
+	cfg              *config.Config
+	db               *sql.DB
+	docker           *docker.Client
+	term             *terminal.Terminal
+	providerRegistry *providers.Registry // to be added later
 }
 
 func New(cfg *config.Config, db *sql.DB, docker *docker.Client) *Handler {
+	// Initialize provider registry with encryption secret
+	secret := []byte(cfg.Security.SecretKey)
+	reg := providers.NewRegistry(db, secret)
+
 	return &Handler{
-		cfg:    cfg,
-		db:     db,
-		docker: docker,
-		term:   terminal.New(docker),
+		cfg:              cfg,
+		db:               db,
+		docker:           docker,
+		term:             terminal.New(docker),
+		providerRegistry: reg,
 	}
 }
 
@@ -68,8 +75,35 @@ func (h *Handler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/agents/{id}/workspace/download", h.DownloadWorkspace).Methods("GET")
 	api.HandleFunc("/agents/{id}/terminal", h.TerminalWebSocket)
 
+	// Providers
 	api.HandleFunc("/providers", h.ListProviders).Methods("GET")
-	api.HandleFunc("/providers/{id}/models", h.ListProviderModels).Methods("GET")
+	api.HandleFunc("/providers", h.CreateProvider).Methods("POST")
+	api.HandleFunc("/providers/{id}", h.GetProvider).Methods("GET")
+	api.HandleFunc("/providers/{id}", h.UpdateProvider).Methods("PATCH")
+	api.HandleFunc("/providers/{id}", h.DeleteProvider).Methods("DELETE")
+	api.HandleFunc("/providers/{id}/refresh-models", h.RefreshProviderModels).Methods("POST")
+
+	// Provider Models (optional listing)
+	api.HandleFunc("/provider-models", h.ListProviderModels).Methods("GET")
+	api.HandleFunc("/provider-models/{id}", h.UpdateProviderModel).Methods("PATCH")
+
+	// Model status
+	api.HandleFunc("/models/status", h.GetModelStatus).Methods("GET")
+
+	// Custom Models
+	api.HandleFunc("/custom-models", h.ListCustomModels).Methods("GET")
+	api.HandleFunc("/custom-models", h.CreateCustomModel).Methods("POST")
+	api.HandleFunc("/custom-models/{alias}", h.GetCustomModel).Methods("GET")
+	api.HandleFunc("/custom-models/{alias}", h.UpdateCustomModel).Methods("PATCH")
+	api.HandleFunc("/custom-models/{alias}", h.DeleteCustomModel).Methods("DELETE")
+
+	// Settings
+	api.HandleFunc("/settings/default_model", h.GetDefaultModel).Methods("GET")
+	api.HandleFunc("/settings/default_model", h.SetDefaultModel).Methods("PUT")
+	api.HandleFunc("/settings/chat_proxy_enabled", h.GetChatProxyEnabled).Methods("GET")
+	api.HandleFunc("/settings/chat_proxy_enabled", h.SetChatProxyEnabled).Methods("PUT")
+
+	// Existing routes...
 	api.HandleFunc("/validate/path", h.ValidatePath).Methods("POST")
 	api.HandleFunc("/validate/token", h.ValidateToken).Methods("POST")
 	api.HandleFunc("/reconcile", h.TriggerReconcile).Methods("POST")
@@ -80,6 +114,13 @@ func (h *Handler) SetupRoutes() *mux.Router {
 	r.HandleFunc("/healthz", h.Healthz)
 	r.HandleFunc("/readyz", h.Readyz)
 	r.HandleFunc("/version", h.Version).Methods("GET")
+
+	// OpenAI-compatible chat proxy (with separate rate limiting)
+	chatRL := NewRateLimiter(60, time.Minute) // 60 requests/min for proxy
+	v1 := r.PathPrefix("/v1").Subrouter()
+	v1.Use(chatRL.Middleware)
+	v1.HandleFunc("/models", h.ListOpenAICompatibleModels).Methods("GET")
+	v1.HandleFunc("/chat/completions", h.ChatCompletions).Methods("POST")
 
 	// Static files - serve from directory relative to executable
 	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir(getStaticDir()))))

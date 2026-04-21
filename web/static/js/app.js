@@ -17,6 +17,8 @@ const app = (() => {
     terminal.init();
     backups.init();
     providers.init();
+    customModels.init();
+    settingsComponent.init();
     auditLog.init();
 
     // Setup view routing
@@ -29,13 +31,9 @@ const app = (() => {
   }
 
   function setupViewRouting() {
-    // Handle hash changes for view switching
     window.addEventListener('hashchange', handleRoute);
-
-    // Initial route
     handleRoute();
 
-    // Listen for state changes
     state.on('currentView', (view) => {
       showView(view);
       updateSidebarActive(view);
@@ -48,18 +46,13 @@ const app = (() => {
   }
 
   function showView(viewName) {
-    // Hide all views
     document.querySelectorAll('.view').forEach((view) => {
       view.classList.add('hidden');
     });
-
-    // Show requested view
     const viewElement = document.getElementById(`${viewName}-view`);
     if (viewElement) {
       viewElement.classList.remove('hidden');
     }
-
-    // Update page title
     updatePageTitle(viewName);
   }
 
@@ -67,13 +60,12 @@ const app = (() => {
     const titles = {
       agents: 'Agents',
       providers: 'Providers',
+      'custom-models': 'Custom Models',
       audit: 'Audit Log',
-      system: 'System Status',
+      system: 'System',
     };
     const title = titles[viewName] || viewName;
     document.title = `${title} - Clawdock`;
-
-    // Update header title
     const headerTitle = document.getElementById('header-title');
     if (headerTitle) {
       headerTitle.textContent = title;
@@ -90,10 +82,7 @@ const app = (() => {
   }
 
   async function loadInitialData() {
-    // Load system status
     await loadSystemStatus();
-
-    // Setup periodic system status refresh
     setInterval(loadSystemStatus, 30000);
   }
 
@@ -128,12 +117,105 @@ const app = (() => {
   };
 })();
 
-// Initialize app when DOM is ready
 dom.onReady(() => {
   app.init();
 });
 
-// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = app;
+}
+
+  function setupViewRouting() {
+    window.addEventListener('hashchange', handleRoute);
+    handleRoute();
+
+    state.on('currentView', (view) => {
+      showView(view);
+      updateSidebarActive(view);
+    });
+  }
+
+  function handleRoute() {
+    const hash = window.location.hash.slice(1) || 'agents';
+    state.setView(hash);
+  }
+
+  function showView(viewName) {
+    document.querySelectorAll('.view').forEach((view) => {
+      view.classList.add('hidden');
+    });
+    const viewElement = document.getElementById(`${viewName}-view`);
+    if (viewElement) {
+      viewElement.classList.remove('hidden');
+    }
+    updatePageTitle(viewName);
+  }
+
+  function updatePageTitle(viewName) {
+    const titles = {
+      agents: 'Agents',
+      providers: 'Providers',
+      'custom-models': 'Custom Models',
+      audit: 'Audit Log',
+      system: 'System',
+    };
+    const title = titles[viewName] || viewName;
+    document.title = `${title} - Clawdock`;
+    const headerTitle = document.getElementById('header-title');
+    if (headerTitle) {
+      headerTitle.textContent = title;
+    }
+  }
+
+  function updateSidebarActive(viewName) {
+    document.querySelectorAll('.nav-link').forEach((link) => {
+      link.classList.remove('active');
+      if (link.dataset.view === viewName) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  async function loadInitialData() {
+    await loadSystemStatus();
+    setInterval(loadSystemStatus, 30000);
+  }
+
+  async function loadSystemStatus() {
+    try {
+      const [health, ready, version] = await Promise.all([
+        api.health.check().catch(() => null),
+        api.health.ready().catch(() => null),
+        api.health.version().catch(() => 'unknown'),
+      ]);
+
+      const statusBadge = document.getElementById('health-status');
+      if (statusBadge) {
+        const isHealthy = health === 'ok' && ready !== null;
+        statusBadge.className = `status-badge ${isHealthy ? 'online' : 'offline'}`;
+        statusBadge.textContent = isHealthy ? 'Healthy' : 'Unhealthy';
+      }
+
+      state.set('systemStatus', {
+        health,
+        ready,
+        version,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Failed to load system status:', error);
+    }
+  }
+
+  return {
+    init,
+  };
+})();
+
+dom.onReady(() => {
+  app.init();
+});
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = app;
 }

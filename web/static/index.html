@@ -33,26 +33,30 @@
                 </div>
             </div>
 
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <a href="#agents" class="nav-link active" data-view="agents">
-                        <span class="nav-icon">🤖</span>
-                        <span>Agents</span>
-                    </a>
-                    <a href="#providers" class="nav-link" data-view="providers">
-                        <span class="nav-icon">🔌</span>
-                        <span>Providers</span>
-                    </a>
-                    <a href="#audit" class="nav-link" data-view="audit">
-                        <span class="nav-icon">📋</span>
-                        <span>Audit Log</span>
-                    </a>
-                    <a href="#system" class="nav-link" data-view="system">
-                        <span class="nav-icon">⚙️</span>
-                        <span>System</span>
-                    </a>
-                </div>
-            </nav>
+             <nav class="sidebar-nav">
+                 <div class="nav-section">
+                     <a href="#agents" class="nav-link active" data-view="agents">
+                         <span class="nav-icon">🤖</span>
+                         <span>Agents</span>
+                     </a>
+                     <a href="#providers" class="nav-link" data-view="providers">
+                         <span class="nav-icon">🔌</span>
+                         <span>Providers</span>
+                     </a>
+                     <a href="#custom-models" class="nav-link" data-view="custom-models">
+                         <span class="nav-icon">🔗</span>
+                         <span>Custom Models</span>
+                     </a>
+                     <a href="#audit" class="nav-link" data-view="audit">
+                         <span class="nav-icon">📋</span>
+                         <span>Audit Log</span>
+                     </a>
+                     <a href="#system" class="nav-link" data-view="system">
+                         <span class="nav-icon">⚙️</span>
+                         <span>System</span>
+                     </a>
+                 </div>
+             </nav>
 
             <div class="sidebar-footer">
                 <div>OpenClaw Manager</div>
@@ -68,6 +72,7 @@
                     <h1 id="header-title" class="header-title">Agents</h1>
                 </div>
                 <div class="header-right">
+                    <button id="btn-settings" class="btn btn-sm btn-secondary" style="margin-right:0.5rem;">⚙️ Settings</button>
                     <span id="health-status" class="status-badge offline">Loading...</span>
                 </div>
             </header>
@@ -355,7 +360,127 @@
         </div>
     </div>
 
-    <!-- Confirmation Modal -->
+    <!-- Provider Modal -->
+    <div id="provider-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Provider</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="provider-form">
+                    <div class="form-group">
+                        <label class="form-label">Display Name <span class="required">*</span></label>
+                        <input type="text" name="display_name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Base URL <span class="required">*</span></label>
+                        <input type="url" name="base_url" class="form-input" placeholder="https://api.example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Auth Type</label>
+                        <select name="auth_type" id="provider-auth-type" class="form-select" required>
+                            <option value="none">None</option>
+                            <option value="api_key">API Key</option>
+                            <option value="bearer">Bearer Token</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="provider-api-key-group" style="display:none;">
+                        <label class="form-label">API Key</label>
+                        <input type="password" name="api_key" class="form-input" placeholder="Enter API key">
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle">
+                            <input type="checkbox" name="supports_model_discovery" class="toggle-input" checked>
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-label">Enable Model Discovery</span>
+                        </label>
+                        <p class="form-hint">When enabled, you can refresh models from the provider's API.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle">
+                            <input type="checkbox" name="enabled" class="toggle-input" checked>
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-label">Enabled</span>
+                        </label>
+                    </div>
+
+                    <div id="provider-form-errors"></div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-action="close-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Provider</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Model Modal -->
+    <div id="custom-model-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Custom Model</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="custom-model-form">
+                    <div class="form-group">
+                        <label class="form-label">Alias (Name) <span class="required">*</span></label>
+                        <input type="text" name="alias" id="custom-alias" class="form-input" required>
+                        <p class="form-hint">A friendly name to reference this model (e.g., "my-gpt-4").</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Target Provider <span class="required">*</span></label>
+                        <select name="target_provider_id" id="custom-target-provider" class="form-select" required>
+                            <option value="">Select provider...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Target Model Key <span class="required">*</span></label>
+                        <input type="text" name="target_model_key" id="custom-target-model-key" class="form-input" required>
+                        <p class="form-hint">The model_key of the provider model (e.g., "gpt-4o").</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="toggle">
+                            <input type="checkbox" name="enabled" class="toggle-input" checked>
+                            <span class="toggle-switch"></span>
+                            <span class="toggle-label">Enabled</span>
+                        </label>
+                    </div>
+
+                    <div id="custom-model-form-errors"></div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-action="close-modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Alias</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings</h2>
+                <button class="modal-close" data-action="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="settings-content">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+     <!-- Custom Models View -->
+     <div id="custom-models-view" class="view">
+         <div id="custom-models-content">
+             <div class="loading"><div class="spinner"></div></div>
+         </div>
+     </div>
+
+     <!-- Confirmation Modal -->
     <div id="confirm-modal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
@@ -390,6 +515,8 @@
     <script src="/js/components/terminal.js"></script>
     <script src="/js/components/backups.js"></script>
     <script src="/js/components/providers.js"></script>
+    <script src="/js/components/custom-models.js"></script>
+    <script src="/js/components/settings.js"></script>
     <script src="/js/components/audit-log.js"></script>
     <script src="/js/app.js"></script>
 </body>

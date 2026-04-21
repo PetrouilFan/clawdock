@@ -62,15 +62,61 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate provider exists and is enabled
+	var providerEnabled int
+	err := h.db.QueryRow("SELECT enabled FROM providers WHERE id = ?", input.ProviderID).Scan(&providerEnabled)
+	if err == sql.ErrNoRows {
+		http.Error(w, "provider not found", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if providerEnabled == 0 {
+		http.Error(w, "provider is disabled", http.StatusBadRequest)
+		return
+	}
+
+	// Validate model exists and is enabled for that provider (direct or via custom alias)
+	var modelCount int
+	err = h.db.QueryRow("SELECT COUNT(1) FROM provider_models WHERE provider_id = ? AND model_key = ? AND enabled = 1", input.ProviderID, input.ModelID).Scan(&modelCount)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if modelCount == 0 {
+		// Check if it's a custom model alias
+		var customTargetProviderID, customTargetModelKey string
+		customErr := h.db.QueryRow("SELECT target_provider_id, target_model_key FROM custom_models WHERE id = ? AND enabled = 1", input.ModelID).Scan(&customTargetProviderID, &customTargetModelKey)
+		if customErr != nil {
+			http.Error(w, "model not found or disabled", http.StatusBadRequest)
+			return
+		}
+		if customTargetProviderID != input.ProviderID {
+			http.Error(w, "custom model does not map to specified provider", http.StatusBadRequest)
+			return
+		}
+		var targetEnabled int
+		err = h.db.QueryRow("SELECT COUNT(1) FROM provider_models WHERE provider_id = ? AND model_key = ? AND enabled = 1", customTargetProviderID, customTargetModelKey).Scan(&targetEnabled)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if targetEnabled == 0 {
+			http.Error(w, "custom model's target model is disabled", http.StatusBadRequest)
+			return
+		}
+	}
+
 	id := uuid.New().String()
 	now := time.Now()
 	slug := sanitizeSlug(input.Name)
 
-	_, err := h.db.Exec(`INSERT INTO agents (id, name, slug, image_repo, image_tag, provider_id, model_id, telegram_api_key_encrypted, workspace_host_path, workspace_container_path, restart_policy, status_desired, status_actual, drift_state, created_at, updated_at)
+	_, err = h.db.Exec(`INSERT INTO agents (id, name, slug, image_repo, image_tag, provider_id, model_id, telegram_api_key_encrypted, workspace_host_path, workspace_container_path, restart_policy, status_desired, status_actual, drift_state, created_at, updated_at)
 		VALUES (?, ?, ?, 'ghcr.io/openclaw/openclaw', ?, ?, ?, ?, ?, ?, ?, 'stopped', 'unknown', 'unknown', ?, ?)`,
 		id, input.Name, slug, input.ImageTag, input.ProviderID, input.ModelID, input.TelegramAPIKey,
 		input.WorkspaceHostPath, input.WorkspaceContainerPath, input.RestartPolicy, now, now)
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,6 +128,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
+
 
 func (h *Handler) GetAgent(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -409,49 +456,6 @@ func (h *Handler) DownloadWorkspace(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=workspace-%s.tar.gz", id))
 	http.ServeFile(w, r, archivePath)
-}
-
-func (h *Handler) ListProviders(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.db.Query("SELECT id, display_name, base_url, auth_type, enabled, supports_model_discovery, created_at, updated_at FROM providers WHERE enabled = 1")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var providers []models.Provider
-	for rows.Next() {
-		var p models.Provider
-		var baseURL sql.NullString
-		rows.Scan(&p.ID, &p.DisplayName, &baseURL, &p.AuthType, &p.Enabled, &p.SupportsModelDiscovery, &p.CreatedAt, &p.UpdatedAt)
-		if baseURL.Valid {
-			p.BaseURL = &baseURL.String
-		}
-		providers = append(providers, p)
-	}
-
-	json.NewEncoder(w).Encode(providers)
-}
-
-func (h *Handler) ListProviderModels(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	providerID := vars["id"]
-
-	rows, err := h.db.Query("SELECT id, provider_id, model_key, display_name, enabled, sort_order FROM provider_models WHERE provider_id = ? AND enabled = 1 ORDER BY sort_order", providerID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var modelList []models.ProviderModel
-	for rows.Next() {
-		var m models.ProviderModel
-		rows.Scan(&m.ID, &m.ProviderID, &m.ModelKey, &m.DisplayName, &m.Enabled, &m.SortOrder)
-		modelList = append(modelList, m)
-	}
-
-	json.NewEncoder(w).Encode(modelList)
 }
 
 func (h *Handler) ValidatePath(w http.ResponseWriter, r *http.Request) {

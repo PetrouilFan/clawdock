@@ -8,6 +8,12 @@ const state = (() => {
     // Data
     agents: [],
     providers: [],
+    providerModelsCache: {}, // provider_id -> models array
+    customModels: [],
+    settings: {
+      default_model: '',
+      chat_proxy_enabled: true,
+    },
     auditLog: [],
     backups: [],
     systemStatus: null,
@@ -37,6 +43,8 @@ const state = (() => {
     loading: {
       agents: false,
       providers: false,
+      customModels: false,
+      settings: false,
       audit: false,
       action: false,
     },
@@ -53,6 +61,11 @@ const state = (() => {
       backup: false,
       restore: false,
       confirm: false,
+      createProvider: false,
+      editProvider: false,
+      createCustomModel: false,
+      editCustomModel: false,
+      settings: false,
     },
 
     // Toast notifications
@@ -250,6 +263,30 @@ const state = (() => {
     return get('agents').find((a) => a.id === id) || null;
   }
 
+  // Provider models cache
+  function setProviderModelsCache(providerId, models) {
+    update('providerModelsCache', (cache) => ({ ...cache, [providerId]: models }));
+  }
+  function getProviderModelsCache(providerId) {
+    return get('providerModelsCache')[providerId] || [];
+  }
+
+  // Custom models
+  function setCustomModels(models) {
+    set('customModels', models);
+  }
+  function getCustomModels() {
+    return get('customModels');
+  }
+
+  // Settings
+  function setSettings(settings) {
+    set('settings', { ...get('settings'), ...settings });
+  }
+  function getSetting(key) {
+    return get('settings')[key];
+  }
+
   return {
     // Core
     get,
@@ -275,6 +312,14 @@ const state = (() => {
     getFilteredAgents,
     getAgentStats,
     getSelectedAgent,
+
+    // Extended
+    setProviderModelsCache,
+    getProviderModelsCache,
+    setCustomModels,
+    getCustomModels,
+    setSettings,
+    getSetting,
   };
 })();
 
